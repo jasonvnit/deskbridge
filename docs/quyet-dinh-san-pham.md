@@ -28,22 +28,24 @@ Danh sách các quyết định đã chốt cho DeskBridge. Khi thay đổi mộ
 | 10 | Khi DeskBridge chạy, **Mac được giữ không ngủ**; tắt DeskBridge thì chế độ này tắt theo. | Máy ngủ thì mất kết nối điều khiển. |
 | 11 | DeskBridge dùng **tunnel và file cấu hình riêng**, không sửa `~/.cloudflared/config.yml`. | Không ảnh hưởng các tunnel khác đang chạy trên máy. |
 
+| 12 | Khi người dùng **rời trang** (ẩn tab, chuyển app, khóa màn hình, cửa sổ mất focus), phiên **tự tạm dừng**: ngừng stream, nhả phím, chặn input. Quay lại thì hiện overlay và phải bấm **Resume** để tiếp tục. Tạm dừng khi mất focus có thể tắt trong cài đặt. | Tránh thao tác nhầm lên Mac khi không nhìn màn hình, tiết kiệm băng thông/pin khi không dùng. |
+
 ## Kỹ thuật
 
 | # | Quyết định | Lý do |
 |---|---|---|
-| 12 | Kiến trúc **server Node.js + helper Swift** giao tiếp qua stdin/stdout. | API gốc của macOS ổn định và hỗ trợ Unicode tốt; các thư viện điều khiển input cho Node.js không còn được bảo trì hoặc đã chuyển sang trả phí. |
-| 13 | Truyền hình ảnh bằng **khung JPEG qua WebSocket**, có kiểm soát luồng theo credit. | Cloudflare Tunnel không chuyển được media UDP của WebRTC. JPEG đơn giản, giải mã được trên mọi trình duyệt; kiểm soát luồng giúp chạy ổn trên mạng di động. |
-| 14 | Phím từ bàn phím rời được gửi **theo vị trí vật lý**; văn bản từ bàn phím ảo/IME được gửi **dạng Unicode**. | Phím tắt hoạt động đúng với bàn phím rời; tiếng Việt từ điện thoại giữ nguyên dấu. |
-| 15 | Giao diện web **không framework, không bước build**; server TypeScript chạy trực tiếp bằng Node.js. | Ít phụ thuộc, dễ đọc, dễ đóng góp. |
+| 13 | Kiến trúc **server Node.js + helper Swift** giao tiếp qua stdin/stdout. | API gốc của macOS ổn định và hỗ trợ Unicode tốt; các thư viện điều khiển input cho Node.js không còn được bảo trì hoặc đã chuyển sang trả phí. |
+| 14 | Truyền hình ảnh bằng **khung JPEG qua WebSocket**, có kiểm soát luồng theo credit. | Cloudflare Tunnel không chuyển được media UDP của WebRTC. JPEG đơn giản, giải mã được trên mọi trình duyệt; kiểm soát luồng giúp chạy ổn trên mạng di động. |
+| 15 | Phím từ bàn phím rời được gửi **theo vị trí vật lý**; văn bản từ bàn phím ảo/IME được gửi **dạng Unicode**. | Phím tắt hoạt động đúng với bàn phím rời; tiếng Việt từ điện thoại giữ nguyên dấu. |
+| 16 | Giao diện web **không framework, không bước build**; server TypeScript chạy trực tiếp bằng Node.js. | Ít phụ thuộc, dễ đọc, dễ đóng góp. |
 
 ## Quy ước dự án
 
 | # | Quyết định |
 |---|---|
-| 16 | Tài liệu (README, docs) viết bằng **tiếng Việt**. |
-| 17 | Code, comment trong code, giao diện người dùng, log và thông điệp của script dùng **tiếng Anh**. |
-| 18 | Repository **công khai**, giấy phép MIT. Không commit bí mật (`.env`, credentials của tunnel). |
+| 17 | Tài liệu (README, docs) viết bằng **tiếng Việt**. |
+| 18 | Code, comment trong code, giao diện người dùng, log và thông điệp của script dùng **tiếng Anh**. |
+| 19 | Repository **công khai**, giấy phép MIT. Không commit bí mật (`.env`, credentials của tunnel). |
 
 ## Hướng phát triển (chưa chốt thời gian)
 

@@ -20,6 +20,15 @@
     <div id="local-cursor" hidden></div>
   </div>
 
+  <div id="pause-overlay" class="pause-overlay" hidden>
+    <div class="pause-card" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+      <h2 id="pause-title">Paused</h2>
+      <p class="muted">Remote control was paused while you were away. The Mac is not being streamed or controlled.</p>
+      <button type="button" id="btn-resume" class="primary">Resume</button>
+    </div>
+  </div>
+
   <div id="status-overlay" class="status-overlay">
     <div class="spinner"></div>
     <p id="status-text">Connecting…</p>
@@ -172,6 +181,7 @@
       </label>
       <label class="check"><input type="checkbox" id="set-paste-sync"> ⌘V pastes this device's clipboard on the Mac</label>
       <label class="check"><input type="checkbox" id="set-copy-sync"> ⌘C / ⌘X copies the Mac clipboard to this device</label>
+      <label class="check"><input type="checkbox" id="set-pause-on-blur"> Pause when this window loses focus</label>
     </div>
 
     <div class="panel-section">

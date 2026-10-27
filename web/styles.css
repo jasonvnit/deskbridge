@@ -521,3 +521,51 @@ input[type="text"] {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* ---- Pause overlay -------------------------------------------------------- */
+
+.pause-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px max(16px, var(--safe-left));
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 40;
+}
+
+.pause-overlay[hidden] {
+  display: none;
+}
+
+.pause-card {
+  width: min(360px, 100%);
+  padding: 28px 24px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface-solid);
+  text-align: center;
+}
+
+.pause-card h2 {
+  margin: 12px 0 6px;
+  font-size: 22px;
+}
+
+.pause-card p {
+  margin: 0 0 20px;
+}
+
+.pause-card button {
+  width: 100%;
+  min-height: 48px;
+  font-size: 17px;
+}
+
+.pause-icon {
+  width: 44px;
+  height: 44px;
+  fill: var(--accent);
+}

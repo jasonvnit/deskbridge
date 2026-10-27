@@ -109,6 +109,24 @@ Có thể tắt 2 tính năng này trong **⚙ → Input**.
   - Hỗ trợ PNG, JPEG, HEIC, GIF; ảnh tối đa 30 MB.
 - **Mac clipboard → Get Mac clipboard**: xem nội dung clipboard của Mac (text hoặc ảnh), sau đó **Copy to this device** hoặc **Save image**. Trên iPhone/iPad có thể nhấn giữ vào ảnh để lưu.
 
+## Tạm dừng khi rời trang
+
+Khi bạn rời DeskBridge, phiên điều khiển **tự tạm dừng**:
+
+- Chuyển sang app khác, về màn hình chính, khóa màn hình điện thoại/tablet.
+- Chuyển sang tab khác của trình duyệt.
+- Cửa sổ trình duyệt mất focus, ví dụ click sang app khác trên laptop. Tắt được trong **⚙ → Pause when this window loses focus**.
+
+Khi tạm dừng:
+
+- Mac **ngừng stream** màn hình (biểu tượng ghi màn hình của macOS tắt).
+- Mọi phím và nút chuột đang giữ được nhả ra.
+- Không có thao tác chuột/phím nào được gửi sang Mac.
+
+Khi quay lại, màn hình hiện overlay **Paused**. Bấm **Resume** để tiếp tục. Nếu kết nối bị ngắt trong lúc tạm dừng (thường gặp trên điện thoại), DeskBridge tự kết nối lại nhưng vẫn chờ bạn bấm Resume.
+
+Việc chọn ảnh (**Choose image…**) hoặc đọc clipboard của thiết bị không làm tạm dừng.
+
 ## Cài đặt (⚙)
 
 | Mục | Ý nghĩa |
@@ -118,6 +136,7 @@ Có thể tắt 2 tính năng này trong **⚙ → Input**.
 | Display | Chọn màn hình nếu Mac có nhiều màn hình |
 | Mode | Touch hoặc Trackpad |
 | Trackpad speed / Scroll speed | Tốc độ di con trỏ và cuộn |
+| Pause when this window loses focus | Tạm dừng khi cửa sổ mất focus (mặc định bật) |
 | Status | Độ phân giải, số khung hình thực tế, băng thông, độ trễ |
 | Sign out | Đăng xuất thiết bị này |
 

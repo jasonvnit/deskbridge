@@ -45,3 +45,9 @@ export function closePanels() {
 }
 
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Set before opening something that steals focus on purpose (file picker,
+ * clipboard permission prompt) so it does not pause the session.
+ */
+export const focusGuard = { expected: false };

@@ -3,7 +3,7 @@ import { Connection } from './connection.js';
 import { KeyboardController } from './keyboard.js';
 import { PointerController } from './pointer.js';
 import { QUALITY_PRESETS, Settings } from './settings.js';
-import { closePanels, setConnectionState, setStatus, toast, togglePanel } from './ui.js';
+import { closePanels, focusGuard, setConnectionState, setStatus, toast, togglePanel } from './ui.js';
 import { Viewer } from './viewer.js';
 
 const $ = (id) => document.getElementById(id);
@@ -68,7 +68,8 @@ connection.addEventListener('message', (event) => {
         settings.set('fps', message.defaults.fps);
         syncFpsInput();
       }
-      send({ t: 'stream', ...settings.streamParams() });
+      // After a reconnect while paused, wait for the user to press Resume.
+      if (!paused) send({ t: 'stream', ...settings.streamParams() });
       break;
     case 'streamInfo':
       stats.width = message.width;
@@ -232,7 +233,9 @@ function bindCheckbox(id, key) {
 let streamUpdateTimer = 0;
 function updateStream() {
   clearTimeout(streamUpdateTimer);
-  streamUpdateTimer = setTimeout(() => send({ t: 'stream', ...settings.streamParams() }), 250);
+  streamUpdateTimer = setTimeout(() => {
+    if (!paused) send({ t: 'stream', ...settings.streamParams() });
+  }, 250);
 }
 
 $('set-quality').value = settings.get('qualityPreset');
@@ -255,6 +258,7 @@ bindRange('set-trackpad', 'trackpadSpeed', (v) => `${Number(v).toFixed(1)}×`);
 bindRange('set-scroll', 'scrollSpeed', (v) => `${Number(v).toFixed(1)}×`);
 bindCheckbox('set-paste-sync', 'pasteSync');
 bindCheckbox('set-copy-sync', 'copySync');
+bindCheckbox('set-pause-on-blur', 'pauseOnBlur');
 
 $('set-mode').addEventListener('change', (e) => settings.set('mode', e.target.value));
 settings.addEventListener('change', (e) => {
@@ -299,6 +303,53 @@ $('btn-logout').addEventListener('click', async () => {
   connection.close();
   await fetch('/api/logout', { method: 'POST' }).catch(() => {});
   location.replace('/login');
+});
+
+// ---- Pause / resume ------------------------------------------------------------------
+// Leaving the page (other tab, other app, locked screen) pauses streaming and input,
+// so nothing is sent to the Mac by accident. Coming back shows an overlay with Resume.
+
+let paused = false;
+
+function closeToolbarPanels() {
+  closePanels();
+  $('btn-clipboard').classList.remove('active');
+  $('btn-settings').classList.remove('active');
+}
+
+function pause() {
+  if (paused) return;
+  paused = true;
+  keyboard.releaseAll();
+  keyboard.clearLatches();
+  keyboard.hideSoftKeyboard();
+  keyboard.enabled = false;
+  send({ t: 'pause' });
+  closeToolbarPanels();
+  $('pause-overlay').hidden = false;
+}
+
+function resume() {
+  if (!paused) return;
+  paused = false;
+  keyboard.enabled = true;
+  $('pause-overlay').hidden = true;
+  send({ t: 'stream', ...settings.streamParams() });
+}
+
+$('btn-resume').addEventListener('click', resume);
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) pause();
+  else if (paused) $('btn-resume').focus({ preventScroll: true });
+});
+window.addEventListener('pagehide', pause);
+window.addEventListener('blur', () => {
+  if (settings.get('pauseOnBlur') && !focusGuard.expected) pause();
+});
+window.addEventListener('focus', () => {
+  focusGuard.expected = false;
+  if (paused) $('btn-resume').focus({ preventScroll: true });
 });
 
 // ---- Start -------------------------------------------------------------------------

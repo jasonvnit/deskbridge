@@ -1,4 +1,4 @@
-import { sleep, toast } from './ui.js';
+import { focusGuard, sleep, toast } from './ui.js';
 
 const PASTE_EVENT_WAIT_MS = 400;
 const COPY_SETTLE_MS = 350;
@@ -154,6 +154,9 @@ export class ClipboardController {
       if (textArea.value) this.#keyboard.typeText(textArea.value);
     });
 
+    $('clip-image').addEventListener('click', () => {
+      focusGuard.expected = true;
+    });
     $('clip-image').addEventListener('change', (e) => {
       const file = e.target.files?.[0];
       e.target.value = '';
@@ -167,6 +170,7 @@ export class ClipboardController {
 
     $('clip-from-device').addEventListener('click', () =>
       run(async () => {
+        focusGuard.expected = true;
         if (!navigator.clipboard?.read) throw new Error('This browser cannot read the clipboard here. Use ⌘V or Choose image.');
         const items = await navigator.clipboard.read();
         for (const item of items) {

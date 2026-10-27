@@ -71,7 +71,8 @@ Trình duyệt ↔ server dùng một kết nối WebSocket:
 
 | `t` | Trường | Ý nghĩa |
 |---|---|---|
-| `stream` | `fps`, `quality` (0.1–1), `maxWidth` (px, 0 = gốc), `displayId` | Bắt đầu/đổi cấu hình stream |
+| `stream` | `fps`, `quality` (0.1–1), `maxWidth` (px, 0 = gốc), `displayId` | Bắt đầu/đổi cấu hình stream; cũng dùng để tiếp tục sau khi tạm dừng |
+| `pause` | | Tạm dừng: server nhả mọi phím/nút, dừng chụp màn hình, bỏ qua mọi lệnh trừ `stream` và `ping` |
 | `ack` | | Đã vẽ xong 1 khung hình (xem *Kiểm soát luồng*) |
 | `refresh` | | Gửi lại khung hình hiện tại |
 | `mouse` | `action`: `move`/`down`/`up`/`scroll`; `x`, `y` (0–1); `button`: `left`/`right`/`middle`; `dx`, `dy` (px) | Chuột |
@@ -92,6 +93,10 @@ Tọa độ chuột được chuẩn hóa về khoảng 0–1 theo màn hình đ
 | `pong` | `ts` | Trả lời `ping` |
 | `replaced` | | Thiết bị khác đã chiếm phiên (đóng với mã `4001`) |
 | `sessionExpired` | | Phiên hết hạn hoặc đã đăng xuất (đóng với mã `4003`) |
+
+### Tạm dừng (pause)
+
+Web client gửi `pause` khi trang bị ẩn (`visibilitychange`, `pagehide`) hoặc cửa sổ mất focus (`blur`, có thể tắt trong cài đặt). Server đánh dấu phiên là đang tạm dừng, gửi `releaseAll` và `stop` cho helper, không chuyển khung hình và bỏ qua mọi lệnh điều khiển. Người dùng bấm **Resume** thì client gửi lại `stream`. Sau khi kết nối lại, client chỉ gửi `stream` nếu không đang tạm dừng.
 
 ### Kiểm soát luồng (flow control)
 

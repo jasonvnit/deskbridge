@@ -33,6 +33,8 @@ Cách xử lý:
 3. Nếu đã bật mà vẫn lỗi: tắt công tắc, bấm `−` để xóa ứng dụng khỏi danh sách, thêm lại, rồi mở lại ứng dụng terminal.
 4. Chạy `scripts/stop.sh && scripts/start.sh`.
 
+**Báo "capture stopped: … application connection being interrupted"**: macOS đang chặn riêng file helper. Điều này có thể xảy ra khi `setup.sh` hỏi quyền lúc chạy từ một terminal chưa được cấp quyền (ví dụ terminal tích hợp của VS Code). Mở **Screen & System Audio Recording**, tìm mục `deskbridge-helper`: bật công tắc, hoặc xóa mục đó (`−`) rồi chạy lại `scripts/start.sh` từ terminal đã được cấp quyền.
+
 Kiểm tra nhanh trạng thái quyền:
 
 ```bash

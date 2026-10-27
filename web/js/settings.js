@@ -18,6 +18,7 @@ const DEFAULTS = {
   pasteSync: true,
   copySync: true,
   toolbarHidden: false,
+  pauseOnBlur: true,
 };
 
 function load() {

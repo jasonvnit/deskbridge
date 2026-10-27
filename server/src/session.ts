@@ -31,6 +31,8 @@ interface Client {
   token: string;
   stream: StreamSettings;
   alive: boolean;
+  /** Paused clients get no frames and cannot send input until they resume. */
+  paused: boolean;
   timers: NodeJS.Timeout[];
 }
 
@@ -62,7 +64,7 @@ export class SessionHub {
     helper.on('frame', (jpeg: Buffer) => this.#onFrame(jpeg));
     helper.on('event', (event: HelperEvent) => this.#onHelperEvent(event));
     helper.on('ready', () => {
-      if (this.#active) this.#startStream(this.#active);
+      if (this.#active && !this.#active.paused) this.#startStream(this.#active);
     });
   }
 
@@ -86,6 +88,7 @@ export class SessionHub {
       token,
       stream: { ...this.#defaults, displayId: 0 },
       alive: true,
+      paused: false,
       timers: [],
     };
     this.#active = client;
@@ -161,7 +164,7 @@ export class SessionHub {
 
   #onFrame(jpeg: Buffer): void {
     const client = this.#active;
-    if (!client || client.ws.readyState !== client.ws.OPEN) return;
+    if (!client || client.paused || client.ws.readyState !== client.ws.OPEN) return;
     client.ws.send(jpeg, { binary: true });
   }
 
@@ -192,12 +195,26 @@ export class SessionHub {
       return;
     }
 
+    // While paused, only resuming (stream) and keep-alive messages are accepted.
+    if (client.paused && message.t !== 'stream' && message.t !== 'ping') return;
+
     switch (message.t) {
       case 'ack':
         this.#helper.send({ type: 'credit', n: 1 });
         break;
 
+      case 'pause':
+        client.paused = true;
+        this.#helper.send({ type: 'releaseAll' });
+        this.#helper.send({ type: 'stop' });
+        log.info(`client from ${client.ip} paused`);
+        break;
+
       case 'stream':
+        if (client.paused) {
+          client.paused = false;
+          log.info(`client from ${client.ip} resumed`);
+        }
         client.stream = {
           fps: Math.round(num(message.fps, client.stream.fps, 1, 60)),
           quality: num(message.quality, client.stream.quality, 0.1, 1),

@@ -19,6 +19,8 @@ export class KeyboardController {
   #latchButtons = [];
   #composing = false;
   clipboard = null;
+  /** When false (e.g. paused), keys are left to the browser and nothing is sent. */
+  enabled = true;
 
   constructor({ sink, send, settings }) {
     this.#sink = sink;
@@ -75,6 +77,7 @@ export class KeyboardController {
   }
 
   #onKeyDown(e) {
+    if (!this.enabled) return;
     if (this.#isForeignInput(e.target)) return;
     if (e.isComposing || e.keyCode === 229 || e.key === 'Process') return; // IME: handled on compositionend.
 
@@ -129,6 +132,7 @@ export class KeyboardController {
   // ---- Text input -------------------------------------------------------------
 
   #onBeforeInput(e) {
+    if (!this.enabled) return;
     switch (e.inputType) {
       case 'insertText':
         if (e.isComposing) return;
@@ -161,6 +165,7 @@ export class KeyboardController {
 
   #onCompositionEnd(e) {
     this.#composing = false;
+    if (!this.enabled) return;
     if (e.data) this.typeText(e.data);
     this.#resetSink();
   }
