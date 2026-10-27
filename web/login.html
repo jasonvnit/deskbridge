@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d10">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="robots" content="noindex, nofollow">
+  <title>DeskBridge · Sign in</title>
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script type="module" src="/static/js/login.js"></script>
+</head>
+<body class="login-page">
+  <main class="login-card">
+    <img class="login-logo" src="/static/icon.svg" alt="" width="56" height="56">
+    <h1>DeskBridge</h1>
+    <p class="muted">Sign in to control this Mac.</p>
+    <form id="login-form" autocomplete="on">
+      <input type="text" name="username" value="deskbridge" autocomplete="username" hidden>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+      <button id="login-submit" type="submit" class="primary">Sign in</button>
+      <p id="login-error" class="error" role="alert" hidden></p>
+    </form>
+  </main>
+</body>
+</html>

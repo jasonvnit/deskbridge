@@ -1,0 +1,28 @@
+{
+  "name": "deskbridge",
+  "version": "0.1.0",
+  "description": "Control a Mac remotely from a phone or tablet browser through a Cloudflare Tunnel.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "setup": "scripts/setup.sh",
+    "start": "scripts/start.sh",
+    "stop": "scripts/stop.sh",
+    "status": "scripts/status.sh",
+    "dev": "node --watch server/src/main.ts",
+    "build:helper": "swift build -c release --package-path helper-macos",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.8.0"
+  }
+}

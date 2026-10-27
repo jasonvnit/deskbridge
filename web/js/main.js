@@ -1,0 +1,311 @@
+import { ClipboardController } from './clipboard.js';
+import { Connection } from './connection.js';
+import { KeyboardController } from './keyboard.js';
+import { PointerController } from './pointer.js';
+import { QUALITY_PRESETS, Settings } from './settings.js';
+import { closePanels, setConnectionState, setStatus, toast, togglePanel } from './ui.js';
+import { Viewer } from './viewer.js';
+
+const $ = (id) => document.getElementById(id);
+
+const settings = new Settings();
+const connection = new Connection();
+const send = (message) => connection.send(message);
+
+const viewer = new Viewer($('stage'), $('screen'));
+const keyboard = new KeyboardController({ sink: $('kbd-sink'), send, settings });
+const clipboard = new ClipboardController({ keyboard });
+const pointer = new PointerController({
+  stage: $('stage'),
+  viewer,
+  send,
+  settings,
+  cursorElement: $('local-cursor'),
+});
+
+// ---- Stats ------------------------------------------------------------------
+
+const stats = { frames: 0, bytes: 0, latency: null, width: 0, height: 0 };
+
+setInterval(() => {
+  $('stat-fps').textContent = connection.isOpen ? String(stats.frames) : '–';
+  $('stat-bandwidth').textContent = connection.isOpen ? `${Math.round((stats.bytes * 8) / 1000)} kbit/s` : '–';
+  $('stat-latency').textContent = stats.latency === null ? '–' : `${stats.latency} ms`;
+  $('stat-resolution').textContent = stats.width ? `${stats.width} × ${stats.height}` : '–';
+  stats.frames = 0;
+  stats.bytes = 0;
+  send({ t: 'ping', ts: performance.now() });
+}, 1000);
+
+// ---- Connection ------------------------------------------------------------------
+
+viewer.onFrameDrawn = () => send({ t: 'ack' });
+
+connection.addEventListener('open', () => {
+  setConnectionState('ok');
+  setStatus('Waiting for the screen…');
+});
+
+connection.addEventListener('close', () => {
+  setConnectionState('bad');
+  stats.latency = null;
+  setStatus('Reconnecting…');
+});
+
+connection.addEventListener('frame', (event) => {
+  stats.frames += 1;
+  stats.bytes += event.detail.byteLength;
+  setStatus(null);
+  viewer.pushFrame(event.detail);
+});
+
+connection.addEventListener('message', (event) => {
+  const message = event.detail;
+  switch (message.t) {
+    case 'welcome':
+      settings.setServerDefaults(message.defaults);
+      if (settings.get('qualityPreset') === 'server') {
+        settings.set('fps', message.defaults.fps);
+        syncFpsInput();
+      }
+      send({ t: 'stream', ...settings.streamParams() });
+      break;
+    case 'streamInfo':
+      stats.width = message.width;
+      stats.height = message.height;
+      break;
+    case 'streamError':
+      setStatus(`Screen capture failed: ${message.message}`, { error: true });
+      break;
+    case 'pong':
+      stats.latency = Math.round(performance.now() - message.ts);
+      break;
+    default:
+      break;
+  }
+});
+
+connection.addEventListener('replaced', () => {
+  setStatus('Another device took over this session. Reload the page to take it back.', { error: true });
+});
+
+connection.addEventListener('unauthorized', () => {
+  location.replace('/login');
+});
+
+// ---- Toolbar --------------------------------------------------------------------
+
+function renderMode() {
+  $('btn-mode').textContent = settings.get('mode') === 'trackpad' ? 'Trackpad' : 'Touch';
+  $('set-mode').value = settings.get('mode');
+}
+
+function setToolbarHidden(hidden) {
+  settings.set('toolbarHidden', hidden);
+  $('toolbar').hidden = hidden;
+  $('btn-show-toolbar').hidden = !hidden;
+  if (hidden) closePanels();
+}
+
+$('btn-mode').addEventListener('click', () => {
+  settings.set('mode', settings.get('mode') === 'touch' ? 'trackpad' : 'touch');
+  toast(settings.get('mode') === 'trackpad' ? 'Trackpad mode: drag to move the pointer, tap to click' : 'Touch mode: tap where you want to click');
+});
+
+$('btn-keyboard').addEventListener('click', () => {
+  if (keyboard.softKeyboardOpen) {
+    keyboard.hideSoftKeyboard();
+  } else {
+    closePanels();
+    keyboard.showSoftKeyboard();
+  }
+});
+
+$('btn-keys').addEventListener('click', () => {
+  const bar = $('keys-bar');
+  bar.hidden = !bar.hidden;
+  $('btn-keys').classList.toggle('active', !bar.hidden);
+});
+
+$('btn-clipboard').addEventListener('click', () => {
+  $('btn-clipboard').classList.toggle('active', togglePanel('panel-clipboard'));
+  $('btn-settings').classList.remove('active');
+});
+
+$('btn-settings').addEventListener('click', () => {
+  const open = togglePanel('panel-settings');
+  $('btn-settings').classList.toggle('active', open);
+  $('btn-clipboard').classList.remove('active');
+  if (open) loadDisplays();
+});
+
+$('btn-fit').addEventListener('click', () => viewer.resetZoom());
+$('btn-hide').addEventListener('click', () => setToolbarHidden(true));
+$('btn-show-toolbar').addEventListener('click', () => setToolbarHidden(false));
+
+for (const button of document.querySelectorAll('.panel-close')) {
+  button.addEventListener('click', () => {
+    closePanels();
+    $('btn-clipboard').classList.remove('active');
+    $('btn-settings').classList.remove('active');
+  });
+}
+
+// A tap on the screen while a panel is open only closes the panel.
+pointer.onPointerStart = () => {
+  const open = !$('panel-clipboard').hidden || !$('panel-settings').hidden;
+  if (open) {
+    closePanels();
+    $('btn-clipboard').classList.remove('active');
+    $('btn-settings').classList.remove('active');
+    return false;
+  }
+  return true;
+};
+
+const root = document.documentElement;
+if (document.fullscreenEnabled || document.webkitFullscreenEnabled) {
+  $('btn-fullscreen').hidden = false;
+  $('btn-fullscreen').addEventListener('click', async () => {
+    try {
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        await (document.exitFullscreen?.() ?? document.webkitExitFullscreen?.());
+        navigator.keyboard?.unlock?.();
+      } else {
+        await (root.requestFullscreen?.({ navigationUI: 'hide' }) ?? root.webkitRequestFullscreen?.());
+        // Chrome: capture shortcuts such as ⌘W / Ctrl+W while in full screen.
+        await navigator.keyboard?.lock?.().catch(() => {});
+      }
+    } catch {
+      toast('Full screen is not available here', { error: true });
+    }
+  });
+}
+
+// ---- Special keys bar --------------------------------------------------------------
+
+const latchButtons = [...document.querySelectorAll('.key.mod')];
+keyboard.bindLatchButtons(latchButtons);
+
+for (const button of document.querySelectorAll('#keys-bar .key')) {
+  // Keep focus where it is (so the soft keyboard stays open).
+  button.addEventListener('pointerdown', (e) => e.preventDefault());
+  button.addEventListener('click', () => {
+    if (button.dataset.mod) keyboard.toggleLatch(button.dataset.mod);
+    else if (button.dataset.key) keyboard.tap(button.dataset.key);
+    else if (button.dataset.combo) {
+      keyboard.combo(button.dataset.combo.split('+'));
+      keyboard.clearLatches();
+    }
+  });
+}
+
+// Keep the keys bar above the soft keyboard.
+function updateKeyboardOffset() {
+  const viewport = window.visualViewport;
+  if (!viewport) return;
+  const offset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+  root.style.setProperty('--keyboard-offset', `${offset}px`);
+}
+window.visualViewport?.addEventListener('resize', updateKeyboardOffset);
+window.visualViewport?.addEventListener('scroll', updateKeyboardOffset);
+
+// ---- Settings panel ---------------------------------------------------------------
+
+function bindRange(id, key, format) {
+  const input = $(id);
+  const label = $(`${id}-value`);
+  input.value = settings.get(key);
+  label.textContent = format(settings.get(key));
+  input.addEventListener('input', () => {
+    settings.set(key, Number(input.value));
+    label.textContent = format(Number(input.value));
+  });
+}
+
+function bindCheckbox(id, key) {
+  const input = $(id);
+  input.checked = settings.get(key);
+  input.addEventListener('change', () => settings.set(key, input.checked));
+}
+
+let streamUpdateTimer = 0;
+function updateStream() {
+  clearTimeout(streamUpdateTimer);
+  streamUpdateTimer = setTimeout(() => send({ t: 'stream', ...settings.streamParams() }), 250);
+}
+
+$('set-quality').value = settings.get('qualityPreset');
+function syncFpsInput() {
+  $('set-fps').value = settings.get('fps');
+  $('set-fps-value').textContent = `${settings.get('fps')}`;
+}
+
+$('set-quality').addEventListener('change', (e) => {
+  const preset = QUALITY_PRESETS[e.target.value] ?? settings.serverDefaults;
+  settings.set('qualityPreset', e.target.value);
+  if (preset) settings.set('fps', preset.fps);
+  syncFpsInput();
+  updateStream();
+});
+
+bindRange('set-fps', 'fps', (v) => `${v}`);
+$('set-fps').addEventListener('change', updateStream);
+bindRange('set-trackpad', 'trackpadSpeed', (v) => `${Number(v).toFixed(1)}×`);
+bindRange('set-scroll', 'scrollSpeed', (v) => `${Number(v).toFixed(1)}×`);
+bindCheckbox('set-paste-sync', 'pasteSync');
+bindCheckbox('set-copy-sync', 'copySync');
+
+$('set-mode').addEventListener('change', (e) => settings.set('mode', e.target.value));
+settings.addEventListener('change', (e) => {
+  if (e.detail.key === 'mode') renderMode();
+});
+
+$('set-display').addEventListener('change', (e) => {
+  settings.set('displayId', Number(e.target.value));
+  viewer.resetZoom();
+  updateStream();
+});
+
+async function loadDisplays() {
+  const select = $('set-display');
+  try {
+    const response = await fetch('/api/displays', { cache: 'no-store' });
+    if (!response.ok) return;
+    const { displays = [] } = await response.json();
+    select.replaceChildren(
+      ...displays.map((display) => {
+        const option = document.createElement('option');
+        option.value = String(display.id);
+        option.textContent = `${display.name}${display.isMain ? ' (main)' : ''} – ${display.width}×${display.height}`;
+        return option;
+      }),
+    );
+    const current = settings.get('displayId');
+    const main = displays.find((display) => display.isMain);
+    select.value = String(displays.some((display) => display.id === current) ? current : main?.id ?? '');
+  } catch {
+    // Keep whatever is shown.
+  }
+}
+
+$('btn-release').addEventListener('click', () => {
+  keyboard.releaseAll();
+  keyboard.clearLatches();
+  toast('Released all keys and buttons');
+});
+
+$('btn-logout').addEventListener('click', async () => {
+  connection.close();
+  await fetch('/api/logout', { method: 'POST' }).catch(() => {});
+  location.replace('/login');
+});
+
+// ---- Start -------------------------------------------------------------------------
+
+renderMode();
+setToolbarHidden(settings.get('toolbarHidden'));
+connection.connect();
+
+// Expose for debugging in the browser console.
+window.deskbridge = { settings, connection, viewer, keyboard, clipboard, pointer };

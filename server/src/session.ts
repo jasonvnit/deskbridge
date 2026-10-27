@@ -1,0 +1,268 @@
+import { randomUUID } from 'node:crypto';
+import type { IncomingMessage } from 'node:http';
+import type { WebSocket, RawData } from 'ws';
+import type { Auth } from './auth.ts';
+import type { StreamDefaults } from './config.ts';
+import type { Helper, HelperEvent } from './helper.ts';
+import { log } from './log.ts';
+import { notify } from './notify.ts';
+
+// Frames that may be in flight to the client before it acknowledges them.
+const INITIAL_CREDITS = 2;
+const HEARTBEAT_MS = 15_000;
+const SESSION_CHECK_MS = 30_000;
+const MAX_TEXT_LENGTH = 20_000;
+const KEY_CODE_PATTERN = /^[A-Za-z0-9]{1,32}$/;
+
+export const CLOSE_REPLACED = 4001;
+export const CLOSE_SESSION_EXPIRED = 4003;
+
+interface StreamSettings {
+  fps: number;
+  quality: number;
+  maxWidth: number;
+  displayId: number;
+}
+
+interface Client {
+  id: string;
+  ws: WebSocket;
+  ip: string;
+  token: string;
+  stream: StreamSettings;
+  alive: boolean;
+  timers: NodeJS.Timeout[];
+}
+
+type ClientMessage = { t?: unknown; [key: string]: unknown };
+
+function num(value: unknown, fallback: number, min: number, max: number): number {
+  const n = typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+/**
+ * Owns the single active remote-control connection.
+ * A new connection replaces the previous one.
+ */
+export class SessionHub {
+  readonly #helper: Helper;
+  readonly #auth: Auth;
+  readonly #defaults: StreamDefaults;
+  readonly #notifyOnConnect: boolean;
+  #active: Client | null = null;
+  #displayId = 0;
+
+  constructor(helper: Helper, auth: Auth, defaults: StreamDefaults, notifyOnConnect: boolean) {
+    this.#helper = helper;
+    this.#auth = auth;
+    this.#defaults = defaults;
+    this.#notifyOnConnect = notifyOnConnect;
+
+    helper.on('frame', (jpeg: Buffer) => this.#onFrame(jpeg));
+    helper.on('event', (event: HelperEvent) => this.#onHelperEvent(event));
+    helper.on('ready', () => {
+      if (this.#active) this.#startStream(this.#active);
+    });
+  }
+
+  get hasActiveClient(): boolean {
+    return this.#active !== null;
+  }
+
+  attach(ws: WebSocket, req: IncomingMessage, ip: string, token: string): void {
+    const previous = this.#active;
+    if (previous) {
+      log.info(`replacing session from ${previous.ip} with a new one from ${ip}`);
+      this.#send(previous, { t: 'replaced' });
+      previous.ws.close(CLOSE_REPLACED, 'replaced by another device');
+      this.#detach(previous);
+    }
+
+    const client: Client = {
+      id: randomUUID(),
+      ws,
+      ip,
+      token,
+      stream: { ...this.#defaults, displayId: 0 },
+      alive: true,
+      timers: [],
+    };
+    this.#active = client;
+    log.info(`client connected from ${ip} (${req.headers['user-agent'] ?? 'unknown agent'})`);
+    if (this.#notifyOnConnect) {
+      notify('DeskBridge', `A device connected from ${ip}`);
+    }
+
+    ws.on('message', (data, isBinary) => {
+      if (!isBinary) this.#onClientMessage(client, data);
+    });
+    ws.on('pong', () => {
+      client.alive = true;
+    });
+    ws.on('close', () => {
+      if (this.#active === client) {
+        log.info(`client from ${ip} disconnected`);
+        this.#detach(client);
+      }
+    });
+    ws.on('error', (error) => log.warn(`websocket error: ${error.message}`));
+
+    client.timers.push(
+      setInterval(() => {
+        if (!client.alive) {
+          ws.terminate();
+          return;
+        }
+        client.alive = false;
+        ws.ping();
+      }, HEARTBEAT_MS),
+      setInterval(() => {
+        if (!this.#auth.touch(client.token)) {
+          this.#send(client, { t: 'sessionExpired' });
+          ws.close(CLOSE_SESSION_EXPIRED, 'session expired');
+        }
+      }, SESSION_CHECK_MS),
+    );
+
+    this.#send(client, { t: 'welcome', defaults: this.#defaults });
+  }
+
+  /** Closes every connection that uses the given session token (logout). */
+  closeSession(token: string): void {
+    const client = this.#active;
+    if (client && client.token === token) {
+      client.ws.close(CLOSE_SESSION_EXPIRED, 'logged out');
+      this.#detach(client);
+    }
+  }
+
+  closeAll(): void {
+    const client = this.#active;
+    if (client) {
+      client.ws.close(1001, 'server shutting down');
+      this.#detach(client);
+    }
+  }
+
+  #detach(client: Client): void {
+    for (const timer of client.timers) clearInterval(timer);
+    client.timers = [];
+    if (this.#active !== client) return;
+    this.#active = null;
+    this.#helper.send({ type: 'releaseAll' });
+    this.#helper.send({ type: 'stop' });
+  }
+
+  #startStream(client: Client): void {
+    this.#helper.send({ type: 'resetCredits', n: INITIAL_CREDITS });
+    this.#helper.send({ type: 'start', ...client.stream });
+  }
+
+  #onFrame(jpeg: Buffer): void {
+    const client = this.#active;
+    if (!client || client.ws.readyState !== client.ws.OPEN) return;
+    client.ws.send(jpeg, { binary: true });
+  }
+
+  #onHelperEvent(event: HelperEvent): void {
+    const client = this.#active;
+    if (!client) return;
+    if (event.type === 'streamInfo') {
+      this.#displayId = Number(event.displayId) || 0;
+      this.#send(client, {
+        t: 'streamInfo',
+        displayId: this.#displayId,
+        width: event.width,
+        height: event.height,
+        fps: event.fps,
+      });
+    } else if (event.type === 'streamError') {
+      this.#send(client, { t: 'streamError', message: event.message });
+    }
+  }
+
+  #onClientMessage(client: Client, data: RawData): void {
+    if (this.#active !== client) return;
+
+    let message: ClientMessage;
+    try {
+      message = JSON.parse(data.toString()) as ClientMessage;
+    } catch {
+      return;
+    }
+
+    switch (message.t) {
+      case 'ack':
+        this.#helper.send({ type: 'credit', n: 1 });
+        break;
+
+      case 'stream':
+        client.stream = {
+          fps: Math.round(num(message.fps, client.stream.fps, 1, 60)),
+          quality: num(message.quality, client.stream.quality, 0.1, 1),
+          maxWidth: Math.round(num(message.maxWidth, client.stream.maxWidth, 0, 8192)),
+          displayId: Math.round(num(message.displayId, client.stream.displayId, 0, 2 ** 32 - 1)),
+        };
+        this.#startStream(client);
+        break;
+
+      case 'refresh':
+        this.#helper.send({ type: 'refresh' });
+        break;
+
+      case 'mouse': {
+        const action = message.action;
+        if (action !== 'move' && action !== 'down' && action !== 'up' && action !== 'scroll') return;
+        const button = message.button;
+        const command: Record<string, unknown> = { type: 'mouse', action, displayId: this.#displayId };
+        if (typeof message.x === 'number' && typeof message.y === 'number') {
+          command.x = num(message.x, 0, 0, 1);
+          command.y = num(message.y, 0, 0, 1);
+        }
+        if (action === 'down' || action === 'up') {
+          command.button = button === 'right' || button === 'middle' ? button : 'left';
+        }
+        if (action === 'scroll') {
+          command.dx = num(message.dx, 0, -5000, 5000);
+          command.dy = num(message.dy, 0, -5000, 5000);
+        }
+        this.#helper.send(command);
+        break;
+      }
+
+      case 'key': {
+        if (typeof message.code !== 'string' || !KEY_CODE_PATTERN.test(message.code)) return;
+        this.#helper.send({
+          type: 'key',
+          code: message.code,
+          down: message.down !== false,
+          repeat: message.repeat === true,
+        });
+        break;
+      }
+
+      case 'text':
+        if (typeof message.text !== 'string' || message.text.length === 0) return;
+        this.#helper.send({ type: 'text', text: message.text.slice(0, MAX_TEXT_LENGTH) });
+        break;
+
+      case 'releaseAll':
+        this.#helper.send({ type: 'releaseAll' });
+        break;
+
+      case 'ping':
+        this.#send(client, { t: 'pong', ts: message.ts });
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  #send(client: Client, message: Record<string, unknown>): void {
+    if (client.ws.readyState === client.ws.OPEN) {
+      client.ws.send(JSON.stringify(message));
+    }
+  }
+}
