@@ -58,14 +58,16 @@ export class SessionHub {
   readonly #auth: Auth;
   readonly #defaults: StreamDefaults;
   readonly #notifyOnConnect: boolean;
+  readonly #idlePauseMinutes: number;
   #active: Client | null = null;
   #displayId = 0;
 
-  constructor(helper: Helper, auth: Auth, defaults: StreamDefaults, notifyOnConnect: boolean) {
+  constructor(helper: Helper, auth: Auth, defaults: StreamDefaults, notifyOnConnect: boolean, idlePauseMinutes: number) {
     this.#helper = helper;
     this.#auth = auth;
     this.#defaults = defaults;
     this.#notifyOnConnect = notifyOnConnect;
+    this.#idlePauseMinutes = idlePauseMinutes;
 
     helper.on('frame', (jpeg: Buffer) => this.#sendBinary(BINARY_JPEG, jpeg));
     helper.on('video', (accessUnit: Buffer) => this.#sendBinary(BINARY_H264, accessUnit));
@@ -142,7 +144,7 @@ export class SessionHub {
       }, SESSION_CHECK_MS),
     );
 
-    this.#send(client, { t: 'welcome', defaults: this.#defaults });
+    this.#send(client, { t: 'welcome', defaults: this.#defaults, idlePauseMinutes: this.#idlePauseMinutes });
   }
 
   /** Closes every connection that uses the given session token (logout). */

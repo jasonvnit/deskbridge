@@ -75,6 +75,7 @@ connection.addEventListener('message', (event) => {
   const message = event.detail;
   switch (message.t) {
     case 'welcome':
+      idleLimitMs = Math.max(0, Number(message.idlePauseMinutes) || 0) * 60_000;
       settings.setServerDefaults(message.defaults);
       if (settings.get('qualityPreset') === 'server') {
         settings.set('fps', message.defaults.fps);
@@ -366,15 +367,33 @@ $('btn-logout').addEventListener('click', async () => {
 
 let paused = false;
 
+// Why the session is paused: 'away' (left the page) or 'idle' (no input for a while).
+const PAUSE_REASONS = {
+  away: {
+    title: 'Paused',
+    text: 'Remote control was paused while you were away. The Mac is not being streamed or controlled.',
+    button: 'Resume',
+  },
+  idle: {
+    title: 'Sleeping',
+    text: 'No activity for a while, so remote control went to sleep. Nothing is streamed or sent to the Mac, so it will not get in the way if you are using the Mac directly.',
+    button: 'Wake up',
+  },
+};
+
 function closeToolbarPanels() {
   closePanels();
   $('btn-clipboard').classList.remove('active');
   $('btn-settings').classList.remove('active');
 }
 
-function pause() {
+function pause(reason = 'away') {
   if (paused) return;
   paused = true;
+  const copy = PAUSE_REASONS[reason] ?? PAUSE_REASONS.away;
+  $('pause-title').textContent = copy.title;
+  $('pause-text').textContent = copy.text;
+  $('btn-resume').textContent = copy.button;
   keyboard.releaseAll();
   keyboard.clearLatches();
   keyboard.hideSoftKeyboard();
@@ -387,6 +406,7 @@ function pause() {
 function resume() {
   if (!paused) return;
   paused = false;
+  markActivity();
   keyboard.enabled = true;
   $('pause-overlay').hidden = true;
   send({ t: 'stream', ...settings.streamParams() });
@@ -407,6 +427,26 @@ window.addEventListener('focus', () => {
   if (paused) $('btn-resume').focus({ preventScroll: true });
 });
 
+// ---- Sleep when idle -------------------------------------------------------------------
+// If nobody touches the web UI for a while (e.g. the remote was left open while the user
+// works on the Mac itself), stop streaming and input until "Wake up" is pressed.
+
+let idleLimitMs = 3 * 60_000;
+let lastActivity = performance.now();
+
+function markActivity() {
+  lastActivity = performance.now();
+}
+
+for (const type of ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart']) {
+  document.addEventListener(type, markActivity, { capture: true, passive: true });
+}
+
+setInterval(() => {
+  if (paused || idleLimitMs <= 0) return;
+  if (performance.now() - lastActivity >= idleLimitMs) pause('idle');
+}, 5000);
+
 // ---- Start -------------------------------------------------------------------------
 
 renderMode();
@@ -415,4 +455,7 @@ settings.h264Supported = await isH264Supported();
 connection.connect();
 
 // Expose for debugging in the browser console.
-window.deskbridge = { settings, connection, viewer, keyboard, clipboard, pointer, cursor, video };
+window.deskbridge = {
+  settings, connection, viewer, keyboard, clipboard, pointer, cursor, video,
+  idle: { get lastActivity() { return lastActivity; }, set lastActivity(value) { lastActivity = value; } },
+};

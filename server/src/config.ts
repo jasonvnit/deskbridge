@@ -32,6 +32,8 @@ export interface Config {
   helperPath: string;
   webDir: string;
   notifyOnConnect: boolean;
+  /** Minutes without input before the web UI puts the session to sleep (0 = never). */
+  idlePauseMinutes: number;
 }
 
 function readInt(name: string, fallback: number, min: number, max: number): number {
@@ -86,5 +88,6 @@ export function loadConfig(): Config {
       path.join(ROOT_DIR, 'helper-macos/.build/release/deskbridge-helper'),
     webDir: path.join(ROOT_DIR, 'web'),
     notifyOnConnect: readBool('DESKBRIDGE_NOTIFY_ON_CONNECT', true),
+    idlePauseMinutes: readInt('DESKBRIDGE_IDLE_PAUSE_MINUTES', 3, 0, 1440),
   };
 }

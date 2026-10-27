@@ -90,7 +90,7 @@ Tọa độ chuột được chuẩn hóa về khoảng 0–1 theo màn hình đ
 
 | `t` | Trường | Ý nghĩa |
 |---|---|---|
-| `welcome` | `defaults` | (xem trên) |
+| `welcome` | `defaults`, `idlePauseMinutes` | Cấu hình stream mặc định từ `.env` và thời gian tự ngủ |
 | `streamInfo` | `displayId`, `codec`, `width`, `height`, `pointWidth`, `pointHeight`, `fps` | Stream đã bắt đầu (`pointWidth/Height`: kích thước màn hình theo point, dùng để scale con trỏ) |
 | `videoConfig` | `codec` (ví dụ `avc1.640C28`), `description` (avcC, base64), `width`, `height` | Cấu hình decoder; gửi trước keyframe đầu tiên và khi tham số thay đổi |
 | `cursor` | `x`, `y` (0–1), `visible`, `seq` | Vị trí con trỏ trên Mac (~30 lần/giây khi thay đổi); `seq` là số thứ tự của lệnh chuột gần nhất mà con trỏ đã thực sự tới đích (hoặc đã quá 250 ms). Mỗi kết nối đánh số lại từ 1, helper luôn lấy số mới nhất chứ không lấy số lớn nhất |
@@ -117,6 +117,10 @@ Web client gửi `pause` khi trang bị ẩn (`visibilitychange`, `pagehide`) ho
 Video không chứa con trỏ. `CursorTracker` trong helper đọc vị trí (~30 Hz) và hình dạng con trỏ hệ thống (`NSCursor.currentSystem`), gửi riêng. Trình duyệt vẽ con trỏ bằng một phần tử `<img>` phủ lên canvas, tại vị trí cục bộ ngay khi người dùng di chuyển. Mỗi lệnh chuột mang một số thứ tự `seq`, và Mac gửi kèm `seq` của lệnh cuối cùng đã thực hiện trong mỗi báo cáo vị trí. Trình duyệt giữ vị trí cục bộ cho tới khi nhận được báo cáo có `seq` mới bằng lệnh gần nhất; các báo cáo cũ hơn (vẫn đang trên đường qua tunnel) bị bỏ qua, nên con trỏ không bị giật ngược về vị trí cũ. Nếu sau 3 giây vẫn chưa có xác nhận, trình duyệt quay về dùng vị trí Mac gửi.
 
 **Đồng bộ con trỏ (`pointerSync`)**: chuyển động thường (không giữ nút) chỉ được gửi theo cài đặt: `live` gửi mọi chuyển động (gộp theo khung hình), `resting` gửi một lệnh `move` khi con trỏ đứng yên 250 ms, `click` không gửi. Trước khi nhấn nút hoặc cuộn, trình duyệt luôn gửi `move` tới vị trí con trỏ cục bộ (macOS cuộn cửa sổ dưới con trỏ Mac); trong lúc giữ nút, mọi chuyển động được gửi ngay. Khi con trỏ cục bộ đã di chuyển mà chưa gửi, lớp vẽ con trỏ giữ vị trí cục bộ (không lấy vị trí Mac).
+
+### Tự ngủ khi không thao tác
+
+Web client ghi lại thời điểm thao tác cuối (`pointerdown`, `pointermove`, `keydown`, `wheel`, `touchstart`). Nếu quá `idlePauseMinutes` mà không có thao tác, client tạm dừng như khi rời trang (gửi `pause`) nhưng hiện overlay **Sleeping** với nút **Wake up**.
 
 ### Kiểm soát luồng (flow control)
 

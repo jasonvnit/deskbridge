@@ -16,6 +16,7 @@ DeskBridge cho phép điều khiển toàn bộ máy Mac qua Internet. Ai có m�
 | Một phiên điều khiển | Chỉ một thiết bị điều khiển tại một thời điểm; thiết bị mới sẽ ngắt thiết bị cũ. |
 | Minh bạch | Thông báo trên Mac mỗi khi có thiết bị kết nối; biểu tượng ghi màn hình của macOS hiện trên thanh menu khi đang stream; log ghi lại đăng nhập thành công/thất bại kèm IP. |
 | Kiểm tra đầu vào | Server kiểm tra và giới hạn mọi lệnh trước khi chuyển cho helper (loại lệnh, khoảng giá trị, độ dài văn bản, kích thước ảnh). |
+| Tự ngủ | Sau 3 phút không thao tác trên web (cấu hình được), phiên tự ngừng stream và chặn điều khiển cho tới khi bấm **Wake up**. |
 | Tắt nhanh | `scripts/stop.sh` ngắt tunnel ngay lập tức. |
 
 ## Khuyến nghị

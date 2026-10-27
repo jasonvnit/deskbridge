@@ -139,6 +139,16 @@ Khi quay lại, màn hình hiện overlay **Paused**. Bấm **Resume** để ti�
 
 Việc chọn ảnh (**Choose image…**) hoặc đọc clipboard của thiết bị không làm tạm dừng.
 
+## Tự ngủ khi không dùng
+
+Nếu **3 phút** không có thao tác nào trên DeskBridge (chạm, rê, click, cuộn, gõ phím), phiên điều khiển tự chuyển sang **Sleeping**. Mục đích là tránh trường hợp quên tắt điều khiển từ xa trong khi đang dùng trực tiếp máy Mac. Khi đang ngủ:
+
+- Mac ngừng stream màn hình, mọi phím và nút chuột đang giữ được nhả ra.
+- Không có thao tác nào được gửi sang Mac.
+- Toàn bộ màn hình bị phủ overlay **Sleeping**. Bấm **Wake up** để dùng tiếp.
+
+Thời gian chờ chỉnh trong `.env` của Mac bằng `DESKBRIDGE_IDLE_PAUSE_MINUTES` (đặt `0` để tắt).
+
 ## Cài đặt (⚙)
 
 | Mục | Ý nghĩa |

@@ -18,7 +18,7 @@ try {
 
 const auth = new Auth(config.password, config.sessionTtlMs, config.sessionIdleMs);
 const helper = new Helper(config.helperPath);
-const hub = new SessionHub(helper, auth, config.stream, config.notifyOnConnect);
+const hub = new SessionHub(helper, auth, config.stream, config.notifyOnConnect, config.idlePauseMinutes);
 
 try {
   helper.start();

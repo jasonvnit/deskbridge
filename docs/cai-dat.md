@@ -59,6 +59,7 @@ Các biến quan trọng (danh sách đầy đủ có trong `.env.example`):
 | `DESKBRIDGE_STREAM_QUALITY` | `40` | Chất lượng ảnh JPEG mặc định (10–100) |
 | `DESKBRIDGE_STREAM_MAX_WIDTH` | `1280` | Chiều rộng tối đa của ảnh JPEG (px), `0` = độ phân giải gốc |
 | `DESKBRIDGE_NOTIFY_ON_CONNECT` | `true` | Hiện thông báo trên Mac khi có thiết bị kết nối |
+| `DESKBRIDGE_IDLE_PAUSE_MINUTES` | `3` | Tự ngủ (ngừng stream và chặn điều khiển) sau bao nhiêu phút không thao tác trên web; `0` = tắt |
 | `DESKBRIDGE_TUNNEL_MODE` | `named` | `named`, `quick` hoặc `none` (xem mục 5) |
 | `DESKBRIDGE_TUNNEL_NAME` | `deskbridge` | Tên tunnel trên Cloudflare |
 | `DESKBRIDGE_TUNNEL_HOSTNAME` | | Tên miền truy cập, ví dụ `desk.tenmien.com` |
