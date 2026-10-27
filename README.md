@@ -9,7 +9,7 @@
 ## Tính năng
 
 - **Xem màn hình** theo thời gian thực, tự giảm khung hình khi mạng chậm, hỗ trợ nhiều màn hình.
-- **Chuột**: chạm để click, giữ để click phải, kéo thả, cuộn 2 ngón, chụm để phóng to. Có chế độ *Trackpad* để điều khiển con trỏ chính xác.
+- **Chuột**: mặc định ở chế độ *Trackpad* (vuốt để di con trỏ, chạm để click) để điều khiển chính xác; có chế độ *Touch* (chạm đâu click đó). Cuộn 2 ngón, chụm để phóng to.
 - **Bàn phím**: dùng bàn phím rời của tablet (kể cả phím tắt ⌘), bàn phím ảo, gõ tiếng Việt, thanh phím đặc biệt (esc, tab, mũi tên, F1–F12, ⌘Tab…).
 - **Clipboard**: ⌘V trên tablet dán nội dung clipboard của tablet vào Mac (cả **ảnh**); ⌘C trên Mac tự chép về tablet; panel Clipboard để gửi/lấy text và ảnh.
 - **Bảo mật**: đăng nhập bằng mật khẩu trong `.env`, chống dò mật khẩu, server chỉ nghe trên `127.0.0.1`, thông báo trên Mac khi có thiết bị kết nối.

@@ -28,6 +28,8 @@ if [[ ! -x "$installed_helper" ]]; then
   mkdir -p "$(dirname "$installed_helper")"
   cp "$HELPER_BIN" "$installed_helper"
 fi
+# Remove copies of older builds (nothing runs them: start.sh only gets here when stopped).
+find "$STATE_DIR/bin" -mindepth 1 -maxdepth 1 -type d ! -name "$cdhash" -exec rm -rf {} +
 export DESKBRIDGE_HELPER_PATH="$installed_helper"
 HELPER_BIN="$installed_helper"
 

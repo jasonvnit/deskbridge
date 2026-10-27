@@ -26,7 +26,7 @@ Chỉ **một thiết bị** điều khiển được tại một thời điểm
 
 ## Điều khiển chuột
 
-### Chế độ Touch (mặc định): chạm đâu click đó
+### Chế độ Touch: chạm đâu click đó
 
 | Thao tác | Kết quả trên Mac |
 |---|---|
@@ -38,7 +38,7 @@ Chỉ **một thiết bị** điều khiển được tại một thời điểm
 | Chạm 2 ngón cùng lúc | Click phải |
 | Chụm/mở 2 ngón | Phóng to/thu nhỏ khung nhìn (chỉ trên thiết bị, không ảnh hưởng Mac) |
 
-### Chế độ Trackpad: như dùng trackpad laptop
+### Chế độ Trackpad (mặc định): như dùng trackpad laptop
 
 Phù hợp khi cần click chính xác vào nút nhỏ. Một chấm tròn màu xanh hiển thị vị trí con trỏ.
 
@@ -131,11 +131,11 @@ Việc chọn ảnh (**Choose image…**) hoặc đọc clipboard của thiết 
 
 | Mục | Ý nghĩa |
 |---|---|
-| Quality | `Default` lấy theo `.env` của Mac; `Low` cho 4G yếu; `High`/`Max` cho Wi-Fi tốt |
+| Quality | Mặc định là `Max` (nét nhất). `Default` lấy theo `.env` của Mac; `Balanced`/`High` nếu hình bị trễ khi màn hình thay đổi nhiều; `Low` cho 4G yếu |
 | Video format | `H.264 video` (mặc định, mượt và nét hơn nhiều) hoặc `JPEG images` (dùng khi trình duyệt cũ không hỗ trợ video). DeskBridge tự chọn JPEG nếu trình duyệt không giải mã được H.264. |
 | Frame rate | Số khung hình/giây tối đa |
 | Display | Chọn màn hình nếu Mac có nhiều màn hình |
-| Mode | Touch hoặc Trackpad |
+| Mode | Trackpad (mặc định) hoặc Touch |
 | Trackpad speed / Scroll speed | Tốc độ di con trỏ và cuộn |
 | Pause when this window loses focus | Tạm dừng khi cửa sổ mất focus (mặc định bật) |
 | Status | Độ phân giải, số khung hình thực tế, băng thông, độ trễ |
