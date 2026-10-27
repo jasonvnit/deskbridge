@@ -2,14 +2,17 @@
 # One-time setup: checks tools, installs dependencies, builds the helper,
 # creates .env, asks for macOS permissions and prepares the Cloudflare Tunnel.
 #
-# Usage: scripts/setup.sh [--skip-tunnel]
+# Usage: scripts/setup.sh [--skip-tunnel] [--overwrite-dns]
+#   --overwrite-dns  replace an existing DNS record for the hostname (e.g. one pointing to another tunnel)
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
 skip_tunnel=false
+overwrite_dns=false
 for arg in "$@"; do
   case "$arg" in
     --skip-tunnel) skip_tunnel=true ;;
+    --overwrite-dns) overwrite_dns=true ;;
     *) die "Unknown option: $arg" ;;
   esac
 done
@@ -85,18 +88,21 @@ else
   fi
   ok "Logged in to Cloudflare"
 
-  if cloudflared tunnel list --output json --name "$DESKBRIDGE_TUNNEL_NAME" 2>/dev/null | grep -q '"id"'; then
+  if cf tunnel list --output json --name "$DESKBRIDGE_TUNNEL_NAME" 2>/dev/null | grep -q '"id"'; then
     ok "Tunnel \"$DESKBRIDGE_TUNNEL_NAME\" already exists"
   else
-    cloudflared tunnel create "$DESKBRIDGE_TUNNEL_NAME"
+    cf tunnel create "$DESKBRIDGE_TUNNEL_NAME"
     ok "Created tunnel \"$DESKBRIDGE_TUNNEL_NAME\""
   fi
 
-  if cloudflared tunnel route dns "$DESKBRIDGE_TUNNEL_NAME" "$DESKBRIDGE_TUNNEL_HOSTNAME" >/dev/null 2>&1; then
+  route_args=(tunnel route dns)
+  [[ "$overwrite_dns" == "true" ]] && route_args+=(--overwrite-dns)
+  if route_output="$(cf "${route_args[@]}" "$DESKBRIDGE_TUNNEL_NAME" "$DESKBRIDGE_TUNNEL_HOSTNAME" 2>&1)"; then
     ok "DNS: $DESKBRIDGE_TUNNEL_HOSTNAME → tunnel \"$DESKBRIDGE_TUNNEL_NAME\""
   else
-    warn "Could not create the DNS record for $DESKBRIDGE_TUNNEL_HOSTNAME."
-    warn "If the record already points to this tunnel, you can ignore this. Otherwise check the DNS tab in Cloudflare."
+    printf '%s\n' "$route_output" | grep -v "WRN" | tail -n 3 >&2
+    warn "Could not create the DNS record for $DESKBRIDGE_TUNNEL_HOSTNAME (it probably exists already)."
+    warn "If it points to another tunnel (Cloudflare shows error 1033), run: scripts/setup.sh --overwrite-dns"
   fi
 fi
 

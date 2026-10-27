@@ -36,7 +36,7 @@ fi
 if [[ "$DESKBRIDGE_TUNNEL_MODE" == "named" ]]; then
   [[ -n "$DESKBRIDGE_TUNNEL_HOSTNAME" && "$DESKBRIDGE_TUNNEL_HOSTNAME" != "desk.example.com" ]] \
     || die "Set DESKBRIDGE_TUNNEL_HOSTNAME in .env (or use DESKBRIDGE_TUNNEL_MODE=quick)."
-  tunnel_id="$(cloudflared tunnel list --output json --name "$DESKBRIDGE_TUNNEL_NAME" 2>/dev/null | node -e '
+  tunnel_id="$(cf tunnel list --output json --name "$DESKBRIDGE_TUNNEL_NAME" 2>/dev/null | node -e '
     let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => {
       try { const list = JSON.parse(s); console.log(list[0]?.id ?? ""); } catch { console.log(""); }
     });')"

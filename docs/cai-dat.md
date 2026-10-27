@@ -80,7 +80,9 @@ URL cố định, ví dụ `https://desk.tenmien.com`. Yêu cầu domain đã đ
 
 Mỗi thành viên trong team nên dùng **hostname và tên tunnel riêng** cho máy của mình, ví dụ `desk-an.tenmien.com` với tunnel `deskbridge-an`.
 
-DeskBridge tự tạo file cấu hình tunnel riêng tại `~/.deskbridge/run/cloudflared.yml`, **không** đụng tới `~/.cloudflared/config.yml` hay các tunnel khác đang chạy trên máy.
+DeskBridge tự tạo file cấu hình tunnel riêng tại `~/.deskbridge/run/cloudflared.yml`, **không** đụng tới `~/.cloudflared/config.yml` hay các tunnel khác đang chạy trên máy. Các lệnh `cloudflared` trong script cũng chạy với file cấu hình riêng, vì nếu `~/.cloudflared/config.yml` có khai báo `tunnel:`, cloudflared sẽ dùng tunnel đó thay cho tên tunnel được truyền vào.
+
+Nếu hostname đã có bản ghi DNS (ví dụ đang trỏ sang tunnel khác), chạy `scripts/setup.sh --overwrite-dns` để ghi đè.
 
 ### Cách B: Quick tunnel, không cần domain
 

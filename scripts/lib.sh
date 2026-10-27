@@ -91,6 +91,15 @@ helper_permissions() {
     });'
 }
 
+# Runs cloudflared management commands with an empty config file, so a tunnel set in
+# ~/.cloudflared/config.yml cannot override the DeskBridge tunnel name.
+cf() {
+  ensure_dirs
+  local config="$RUN_DIR/cloudflared-cli.yml"
+  [[ -f "$config" ]] || echo "no-autoupdate: true" >"$config"
+  cloudflared --config "$config" "$@"
+}
+
 public_url() {
   case "$DESKBRIDGE_TUNNEL_MODE" in
     named) printf 'https://%s' "$DESKBRIDGE_TUNNEL_HOSTNAME" ;;

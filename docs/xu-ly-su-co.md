@@ -47,7 +47,7 @@ helper-macos/.build/release/deskbridge-helper permissions
 
 | Hiện tượng | Cách xử lý |
 |---|---|
-| Lỗi 1033 / 530 của Cloudflare | Tunnel chưa kết nối. Xem `cloudflared.log`, chạy lại `scripts/start.sh`. |
+| Lỗi 1033 / 530 của Cloudflare | Tunnel chưa kết nối, **hoặc bản ghi DNS trỏ sang tunnel khác**. Chạy `scripts/status.sh`: nếu tunnel đang chạy mà vẫn lỗi 1033, chạy `scripts/setup.sh --overwrite-dns` để trỏ lại hostname về tunnel DeskBridge. Nếu tunnel không chạy, xem `cloudflared.log` và chạy lại `scripts/start.sh`. |
 | Lỗi 404 của Cloudflare | Bản ghi DNS chưa trỏ đúng tunnel. Chạy lại `scripts/setup.sh`, hoặc kiểm tra tab DNS trên Cloudflare (bản ghi CNAME trỏ tới `<tunnel-id>.cfargotunnel.com`). |
 | Lỗi 502 | Tunnel chạy nhưng server đã tắt. Chạy `scripts/stop.sh && scripts/start.sh`. |
 | Quick tunnel không in ra URL | Kiểm tra mạng, xem `cloudflared.log`. |
