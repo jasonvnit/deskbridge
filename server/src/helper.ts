@@ -5,6 +5,7 @@ import { log } from './log.ts';
 
 const KIND_JSON = 1;
 const KIND_FRAME = 2;
+const KIND_VIDEO = 3;
 const HEADER_SIZE = 5;
 
 export type HelperEvent = { type: string; [key: string]: unknown };
@@ -20,6 +21,7 @@ interface Pending {
  *
  * Events:
  *   'frame'   (jpeg: Buffer)
+ *   'video'   (accessUnit: Buffer)       1 byte key-frame flag + AVCC data
  *   'event'   (message: HelperEvent)   e.g. streamInfo, streamError
  *   'ready'   ()                       helper (re)started and is accepting commands
  */
@@ -117,6 +119,8 @@ export class Helper extends EventEmitter {
 
       if (kind === KIND_FRAME) {
         this.emit('frame', Buffer.from(payload));
+      } else if (kind === KIND_VIDEO) {
+        this.emit('video', Buffer.from(payload));
       } else if (kind === KIND_JSON) {
         this.#onMessage(payload.toString('utf8'));
       }

@@ -157,6 +157,13 @@
           <option value="max">Max (native resolution)</option>
         </select>
       </label>
+      <label class="field">Video format
+        <select id="set-codec">
+          <option value="server">Default (from the Mac's .env)</option>
+          <option value="auto">H.264 video when supported (recommended)</option>
+          <option value="jpeg">JPEG images (most compatible)</option>
+        </select>
+      </label>
       <label class="field">Frame rate <span id="set-fps-value"></span>
         <input type="range" id="set-fps" min="5" max="30" step="1">
       </label>
@@ -187,6 +194,7 @@
     <div class="panel-section">
       <h3>Status</h3>
       <dl class="stats">
+        <dt>Format</dt><dd id="stat-codec">–</dd>
         <dt>Resolution</dt><dd id="stat-resolution">–</dd>
         <dt>Frames/s</dt><dd id="stat-fps">–</dd>
         <dt>Bandwidth</dt><dd id="stat-bandwidth">–</dd>

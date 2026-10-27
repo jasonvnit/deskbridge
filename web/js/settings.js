@@ -1,17 +1,20 @@
 const STORAGE_KEY = 'deskbridge.settings.v1';
 
-// Measured through Cloudflare Tunnel with ~5-6 Mbit/s upload on a busy 3440x1440 screen:
+// JPEG (quality, maxWidth) was measured through Cloudflare Tunnel with ~5-6 Mbit/s upload:
 // low ~35 KB/frame (~20 fps), balanced ~65 KB (~10 fps), high ~130 KB (~5 fps).
+// H.264 (bitrate in kbit/s, videoMaxWidth) stays under that upload limit.
 export const QUALITY_PRESETS = {
-  low: { quality: 0.3, maxWidth: 1024, fps: 24 },
-  balanced: { quality: 0.4, maxWidth: 1280, fps: 20 },
-  high: { quality: 0.55, maxWidth: 1600, fps: 20 },
-  max: { quality: 0.8, maxWidth: 0, fps: 24 },
+  low: { quality: 0.3, maxWidth: 1024, bitrate: 1200, videoMaxWidth: 1280, fps: 24 },
+  balanced: { quality: 0.4, maxWidth: 1280, bitrate: 2500, videoMaxWidth: 1920, fps: 30 },
+  high: { quality: 0.55, maxWidth: 1600, bitrate: 4000, videoMaxWidth: 2560, fps: 30 },
+  max: { quality: 0.8, maxWidth: 0, bitrate: 6000, videoMaxWidth: 0, fps: 30 },
 };
 
 const DEFAULTS = {
   // 'server' uses the defaults from the server's .env.
   qualityPreset: 'server',
+  // 'server' follows DESKBRIDGE_STREAM_CODEC; 'auto' uses H.264 when supported.
+  codec: 'server',
   fps: 20,
   displayId: 0,
   mode: 'touch',
@@ -37,6 +40,8 @@ function load() {
 export class Settings extends EventTarget {
   #values = load();
   #serverDefaults = null;
+  /** Set at startup: whether this browser can decode H.264. */
+  h264Supported = false;
 
   /** Stream defaults announced by the server (from .env). */
   setServerDefaults(defaults) {
@@ -62,13 +67,23 @@ export class Settings extends EventTarget {
     this.dispatchEvent(new CustomEvent('change', { detail: { key, value } }));
   }
 
+  /** The codec to request: H.264 only if wanted and supported here. */
+  resolvedCodec() {
+    let choice = this.#values.codec;
+    if (choice === 'server') choice = this.#serverDefaults?.codec ?? 'auto';
+    return choice !== 'jpeg' && this.h264Supported ? 'h264' : 'jpeg';
+  }
+
   /** Stream parameters sent to the server. */
   streamParams() {
     const preset =
       QUALITY_PRESETS[this.#values.qualityPreset] ?? this.#serverDefaults ?? QUALITY_PRESETS.balanced;
+    const codec = this.resolvedCodec();
     return {
+      codec,
       quality: preset.quality,
-      maxWidth: preset.maxWidth,
+      bitrate: preset.bitrate,
+      maxWidth: codec === 'h264' ? preset.videoMaxWidth : preset.maxWidth,
       fps: this.#values.fps,
       displayId: this.#values.displayId,
     };

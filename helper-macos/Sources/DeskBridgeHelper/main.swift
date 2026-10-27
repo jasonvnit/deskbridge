@@ -102,6 +102,8 @@ final class Controller {
             capture.resetCredits((message["n"] as? Int) ?? 2)
         case "refresh":
             capture.refresh()
+        case "keyframe":
+            capture.requestKeyFrame()
 
         case "mouse":
             inputQueue.async { self.input.mouse(message) }

@@ -64,14 +64,17 @@ Mọi request POST và WebSocket đều phải có header `Origin` trùng với 
 
 Trình duyệt ↔ server dùng một kết nối WebSocket:
 
-- **Server → trình duyệt, binary:** mỗi message là một ảnh JPEG hoàn chỉnh.
+- **Server → trình duyệt, binary:** byte đầu cho biết loại dữ liệu:
+  - `1` + ảnh JPEG hoàn chỉnh.
+  - `2` + 1 byte (1 = keyframe, 0 = delta) + một khung H.264 dạng AVCC (các NAL unit có tiền tố độ dài).
 - **Hai chiều, text:** JSON có trường `t` là loại message.
 
 ### Trình duyệt → server
 
 | `t` | Trường | Ý nghĩa |
 |---|---|---|
-| `stream` | `fps`, `quality` (0.1–1), `maxWidth` (px, 0 = gốc), `displayId` | Bắt đầu/đổi cấu hình stream; cũng dùng để tiếp tục sau khi tạm dừng |
+| `stream` | `codec` (`h264`/`jpeg`), `fps`, `quality` (JPEG, 0.1–1), `bitrate` (H.264, kbit/s), `maxWidth` (px, 0 = gốc), `displayId` | Bắt đầu/đổi cấu hình stream; cũng dùng để tiếp tục sau khi tạm dừng |
+| `keyframe` | | Decoder bị lỗi: đặt lại credit và xin một keyframe mới |
 | `pause` | | Tạm dừng: server nhả mọi phím/nút, dừng chụp màn hình, bỏ qua mọi lệnh trừ `stream` và `ping` |
 | `ack` | | Đã vẽ xong 1 khung hình (xem *Kiểm soát luồng*) |
 | `refresh` | | Gửi lại khung hình hiện tại |
@@ -87,8 +90,11 @@ Tọa độ chuột được chuẩn hóa về khoảng 0–1 theo màn hình đ
 
 | `t` | Trường | Ý nghĩa |
 |---|---|---|
-| `welcome` | `defaults` | Cấu hình stream mặc định từ `.env` |
-| `streamInfo` | `displayId`, `width`, `height`, `fps` | Stream đã bắt đầu |
+| `welcome` | `defaults` | (xem trên) |
+| `streamInfo` | `displayId`, `codec`, `width`, `height`, `pointWidth`, `pointHeight`, `fps` | Stream đã bắt đầu (`pointWidth/Height`: kích thước màn hình theo point, dùng để scale con trỏ) |
+| `videoConfig` | `codec` (ví dụ `avc1.640C28`), `description` (avcC, base64), `width`, `height` | Cấu hình decoder; gửi trước keyframe đầu tiên và khi tham số thay đổi |
+| `cursor` | `x`, `y` (0–1), `visible` | Vị trí con trỏ trên Mac (~30 lần/giây khi thay đổi) |
+| `cursorShape` | `id`, và lần đầu kèm `png` (base64), `hotX`, `hotY`, `width`, `height` (point) | Hình dạng con trỏ; các lần sau chỉ gửi `id` để trình duyệt dùng lại bản đã lưu |
 | `streamError` | `message` | Lỗi chụp màn hình (thường do thiếu quyền) |
 | `pong` | `ts` | Trả lời `ping` |
 | `replaced` | | Thiết bị khác đã chiếm phiên (đóng với mã `4001`) |
@@ -97,6 +103,18 @@ Tọa độ chuột được chuẩn hóa về khoảng 0–1 theo màn hình đ
 ### Tạm dừng (pause)
 
 Web client gửi `pause` khi trang bị ẩn (`visibilitychange`, `pagehide`) hoặc cửa sổ mất focus (`blur`, có thể tắt trong cài đặt). Server đánh dấu phiên là đang tạm dừng, gửi `releaseAll` và `stop` cho helper, không chuyển khung hình và bỏ qua mọi lệnh điều khiển. Người dùng bấm **Resume** thì client gửi lại `stream`. Sau khi kết nối lại, client chỉ gửi `stream` nếu không đang tạm dừng.
+
+### Video H.264
+
+- Helper mã hóa bằng VideoToolbox (phần cứng), chế độ real-time, **không B-frame**, bật *low-latency rate control* trên chip Apple (profile Constrained High). Keyframe chỉ được tạo khi bắt đầu stream hoặc khi trình duyệt xin (`keyframe`).
+- Khung hình chụp được mà chưa có credit sẽ không được mã hóa (chỉ giữ khung mới nhất), nên luồng video vẫn hợp lệ khi bỏ qua khung.
+- Khi màn hình ngừng thay đổi, helper mã hóa lại khung cuối sau 0,25 s, 0,8 s và 2 s để chữ nét dần (mỗi lần chỉ tốn vài KB).
+- Trình duyệt dùng `VideoDecoder` (WebCodecs) với `optimizeForLatency`. Mỗi khung nhận được được `ack` đúng một lần (sau khi vẽ, hoặc ngay nếu phải bỏ qua). Khi decoder lỗi, trình duyệt tạo lại decoder và gửi `keyframe`.
+- Trình duyệt không hỗ trợ WebCodecs H.264 sẽ tự dùng JPEG.
+
+### Con trỏ chuột
+
+Video không chứa con trỏ. `CursorTracker` trong helper đọc vị trí (~30 Hz) và hình dạng con trỏ hệ thống (`NSCursor.currentSystem`), gửi riêng. Trình duyệt vẽ con trỏ bằng một phần tử `<img>` phủ lên canvas: khi người dùng đang di chuyển (400 ms gần nhất) thì vẽ tại vị trí cục bộ ngay lập tức, ngoài ra theo vị trí Mac gửi về.
 
 ### Kiểm soát luồng (flow control)
 
@@ -115,13 +133,16 @@ Kết quả: mạng nhanh thì đạt đủ fps; mạng chậm thì fps tự gi�
 - **stdout (helper → server):** gói tin có độ dài: `1 byte loại` + `4 byte độ dài (big-endian)` + `dữ liệu`.
   - Loại `1`: JSON (`ready`, `streamInfo`, `streamError`, `reply`).
   - Loại `2`: khung hình JPEG.
+  - Loại `3`: khung H.264 (1 byte keyframe + AVCC).
+- Sự kiện JSON khác: `cursor`, `cursorShape`, `videoConfig`.
 - **stderr:** log, được server ghi vào `server.log`.
 
 | Lệnh (`type`) | Trường | Phản hồi |
 |---|---|---|
-| `start` | `displayId`, `fps`, `quality`, `maxWidth` | Sự kiện `streamInfo` |
+| `start` | `displayId`, `codec`, `fps`, `quality`, `bitrate`, `maxWidth` | Sự kiện `streamInfo` (và `videoConfig` với H.264) |
 | `stop` | | |
 | `credit` / `resetCredits` | `n` | |
+| `keyframe` | | Khung H.264 tiếp theo là keyframe |
 | `refresh` | | |
 | `mouse` | `action`, `x`, `y`, `button`, `dx`, `dy`, `displayId` | |
 | `key` | `code`, `down`, `repeat` | |
@@ -146,7 +167,10 @@ helper-macos/.build/release/deskbridge-helper displays             # In danh sá
 | File | Nội dung |
 |---|---|
 | `main.swift` | Đọc lệnh, điều phối, các lệnh chạy một lần |
-| `ScreenCapture.swift` | ScreenCaptureKit, scale khung hình, mã hóa JPEG (Core Image), credit |
+| `ScreenCapture.swift` | ScreenCaptureKit, scale khung hình, mã hóa JPEG (Core Image) hoặc chuyển cho H.264, credit, làm nét khi đứng yên |
+| `H264Encoder.swift` | Mã hóa H.264 bằng VideoToolbox, xuất avcC + AVCC |
+| `CursorTracker.swift` | Vị trí và hình dạng con trỏ |
+| `Probe.swift` | Lệnh `probe`: thử chụp thật để kiểm tra quyền |
 | `Input.swift` | Giả lập chuột/phím bằng CGEvent, theo dõi phím đang giữ, nhận diện double-click |
 | `KeyMap.swift` | Bảng chuyển `KeyboardEvent.code` → mã phím macOS |
 | `Clipboard.swift` | Đọc/ghi text và ảnh với NSPasteboard |
@@ -161,7 +185,9 @@ HTML/CSS/JavaScript thuần (ES modules), không framework, không bước build
 |---|---|
 | `js/main.js` | Khởi tạo, thanh công cụ, panel cài đặt, số liệu |
 | `js/connection.js` | WebSocket, tự kết nối lại |
-| `js/viewer.js` | Giải mã và vẽ JPEG lên canvas, thu phóng/kéo khung nhìn, đổi tọa độ |
+| `js/viewer.js` | Vẽ khung hình lên canvas (giải mã JPEG), thu phóng/kéo khung nhìn, đổi tọa độ |
+| `js/video.js` | Giải mã H.264 bằng WebCodecs, khôi phục khi lỗi |
+| `js/cursor.js` | Vẽ con trỏ của Mac phủ lên màn hình |
 | `js/pointer.js` | Cử chỉ cảm ứng (Touch/Trackpad), chuột, cuộn |
 | `js/keyboard.js` | Bàn phím rời, bàn phím ảo, IME, phím chốt |
 | `js/keymap.js` | Chuẩn hóa mã phím |

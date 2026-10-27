@@ -132,6 +132,7 @@ Việc chọn ảnh (**Choose image…**) hoặc đọc clipboard của thiết 
 | Mục | Ý nghĩa |
 |---|---|
 | Quality | `Default` lấy theo `.env` của Mac; `Low` cho 4G yếu; `High`/`Max` cho Wi-Fi tốt |
+| Video format | `H.264 video` (mặc định, mượt và nét hơn nhiều) hoặc `JPEG images` (dùng khi trình duyệt cũ không hỗ trợ video). DeskBridge tự chọn JPEG nếu trình duyệt không giải mã được H.264. |
 | Frame rate | Số khung hình/giây tối đa |
 | Display | Chọn màn hình nếu Mac có nhiều màn hình |
 | Mode | Touch hoặc Trackpad |
@@ -143,6 +144,10 @@ Việc chọn ảnh (**Choose image…**) hoặc đọc clipboard của thiết 
 Các cài đặt được lưu riêng trên từng thiết bị.
 
 **Mạng chậm?** Chọn Quality `Low` và giảm Frame rate. DeskBridge tự giảm số khung hình khi mạng không kịp, nên hình luôn là mới nhất (không bị trễ dồn).
+
+**Chữ hơi mờ ngay sau khi cuộn hoặc chuyển cửa sổ?** Đó là đặc điểm của video nén: khi màn hình đứng yên, chữ sẽ nét lại sau khoảng 1–2 giây.
+
+**Con trỏ chuột** được vẽ ngay trên thiết bị của bạn (không nằm trong video), nên luôn bám theo tay mà không bị trễ, và đổi hình dạng theo Mac (mũi tên, I-beam, bàn tay…).
 
 ## Kết thúc
 

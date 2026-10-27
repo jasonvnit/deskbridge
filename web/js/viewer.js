@@ -34,8 +34,8 @@ export class Viewer {
     return this.#canvas.width > 0 && this.#baseWidth > 0;
   }
 
-  /** Decodes and draws a JPEG frame. Frames arriving mid-decode replace each other. */
-  pushFrame(buffer) {
+  /** Decodes and draws a JPEG frame (bytes). Frames arriving mid-decode replace each other. */
+  pushJpeg(buffer) {
     if (this.#decoding) {
       if (this.#pending) this.onFrameDrawn(false);
       this.#pending = buffer;
@@ -48,12 +48,7 @@ export class Viewer {
     this.#decoding = true;
     try {
       const bitmap = await createImageBitmap(new Blob([buffer], { type: 'image/jpeg' }));
-      if (bitmap.width !== this.#canvas.width || bitmap.height !== this.#canvas.height) {
-        this.#canvas.width = bitmap.width;
-        this.#canvas.height = bitmap.height;
-        this.layout();
-      }
-      this.#context.drawImage(bitmap, 0, 0);
+      this.drawSource(bitmap, bitmap.width, bitmap.height);
       bitmap.close();
     } catch {
       // A corrupt frame is skipped; the next one replaces it.
@@ -64,6 +59,16 @@ export class Viewer {
     const next = this.#pending;
     this.#pending = null;
     if (next) this.#decode(next);
+  }
+
+  /** Draws any image source (ImageBitmap, VideoFrame) as the current screen. */
+  drawSource(source, width, height) {
+    if (width !== this.#canvas.width || height !== this.#canvas.height) {
+      this.#canvas.width = width;
+      this.#canvas.height = height;
+      this.layout();
+    }
+    this.#context.drawImage(source, 0, 0, width, height);
   }
 
   layout() {

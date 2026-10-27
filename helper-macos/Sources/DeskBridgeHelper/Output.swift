@@ -3,10 +3,11 @@ import Foundation
 /// Writes length-prefixed messages to stdout.
 ///
 /// Wire format: 1 byte kind + 4 bytes big-endian payload length + payload.
-/// Kind 1 = UTF-8 JSON, kind 2 = JPEG frame.
+/// Kind 1 = UTF-8 JSON, kind 2 = JPEG frame, kind 3 = H.264 access unit.
 final class Output {
     static let kindJSON: UInt8 = 1
     static let kindFrame: UInt8 = 2
+    static let kindVideo: UInt8 = 3
 
     private let lock = NSLock()
     private let handle = FileHandle.standardOutput
@@ -21,6 +22,11 @@ final class Output {
 
     func sendFrame(_ jpeg: Data) {
         write(kind: Output.kindFrame, payload: jpeg)
+    }
+
+    /// H.264 access unit: 1 byte key-frame flag + AVCC data.
+    func sendVideo(_ payload: Data) {
+        write(kind: Output.kindVideo, payload: payload)
     }
 
     private func write(kind: UInt8, payload: Data) {

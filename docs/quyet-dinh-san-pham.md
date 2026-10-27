@@ -35,22 +35,21 @@ Danh sách các quyết định đã chốt cho DeskBridge. Khi thay đổi mộ
 | # | Quyết định | Lý do |
 |---|---|---|
 | 13 | Kiến trúc **server Node.js + helper Swift** giao tiếp qua stdin/stdout. | API gốc của macOS ổn định và hỗ trợ Unicode tốt; các thư viện điều khiển input cho Node.js không còn được bảo trì hoặc đã chuyển sang trả phí. |
-| 14 | Truyền hình ảnh bằng **khung JPEG qua WebSocket**, có kiểm soát luồng theo credit. | Cloudflare Tunnel không chuyển được media UDP của WebRTC. JPEG đơn giản, giải mã được trên mọi trình duyệt; kiểm soát luồng giúp chạy ổn trên mạng di động. |
-| 15 | Phím từ bàn phím rời được gửi **theo vị trí vật lý**; văn bản từ bàn phím ảo/IME được gửi **dạng Unicode**. | Phím tắt hoạt động đúng với bàn phím rời; tiếng Việt từ điện thoại giữ nguyên dấu. |
-| 16 | Giao diện web **không framework, không bước build**; server TypeScript chạy trực tiếp bằng Node.js. | Ít phụ thuộc, dễ đọc, dễ đóng góp. |
+| 14 | Truyền hình ảnh qua **WebSocket**, mặc định bằng **video H.264** (mã hóa phần cứng VideoToolbox, giải mã bằng WebCodecs), **dự phòng bằng ảnh JPEG** cho trình duyệt không hỗ trợ. Có kiểm soát luồng theo credit. | Cloudflare Tunnel không chuyển được media UDP của WebRTC. Đo thực tế qua tunnel, băng thông lên chỉ khoảng 5–6 Mbit/s: JPEG chỉ đạt 5–10 fps, H.264 chỉ gửi phần thay đổi nên đạt 20–30 fps ở độ phân giải cao hơn. |
+| 15 | **Con trỏ chuột không nằm trong video**: Mac gửi riêng vị trí và hình dạng, trình duyệt vẽ con trỏ ngay tại vị trí tay người dùng. | Con trỏ không phải chờ khung hình đi qua tunnel, nên không bị trễ. |
+| 16 | Phím từ bàn phím rời được gửi **theo vị trí vật lý**; văn bản từ bàn phím ảo/IME được gửi **dạng Unicode**. | Phím tắt hoạt động đúng với bàn phím rời; tiếng Việt từ điện thoại giữ nguyên dấu. |
+| 17 | Giao diện web **không framework, không bước build**; server TypeScript chạy trực tiếp bằng Node.js. | Ít phụ thuộc, dễ đọc, dễ đóng góp. |
 
 ## Quy ước dự án
 
 | # | Quyết định |
 |---|---|
-| 17 | Tài liệu (README, docs) viết bằng **tiếng Việt**. |
-| 18 | Code, comment trong code, giao diện người dùng, log và thông điệp của script dùng **tiếng Anh**. |
-| 19 | Repository **công khai**, giấy phép MIT. Không commit bí mật (`.env`, credentials của tunnel). |
+| 18 | Tài liệu (README, docs) viết bằng **tiếng Việt**. |
+| 19 | Code, comment trong code, giao diện người dùng, log và thông điệp của script dùng **tiếng Anh**. |
+| 20 | Repository **công khai**, giấy phép MIT. Không commit bí mật (`.env`, credentials của tunnel). |
 
 ## Hướng phát triển (chưa chốt thời gian)
 
-- Nén video H.264 (VideoToolbox + WebCodecs) để giảm băng thông.
-- Chỉ gửi vùng màn hình thay đổi.
 - Gửi/nhận file.
 - Âm thanh.
 - Hỗ trợ Windows/Linux bằng helper riêng.

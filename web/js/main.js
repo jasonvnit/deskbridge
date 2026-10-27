@@ -5,6 +5,7 @@ import { KeyboardController } from './keyboard.js';
 import { PointerController } from './pointer.js';
 import { QUALITY_PRESETS, Settings } from './settings.js';
 import { closePanels, focusGuard, setConnectionState, setStatus, toast, togglePanel } from './ui.js';
+import { isH264Supported, VideoPipeline } from './video.js';
 import { Viewer } from './viewer.js';
 
 const $ = (id) => document.getElementById(id);
@@ -17,6 +18,11 @@ const viewer = new Viewer($('stage'), $('screen'));
 const keyboard = new KeyboardController({ sink: $('kbd-sink'), send, settings });
 const clipboard = new ClipboardController({ keyboard });
 const cursor = new CursorOverlay({ element: $('remote-cursor'), viewer });
+const video = new VideoPipeline({
+  viewer,
+  onDone: () => send({ t: 'ack' }),
+  requestKeyFrame: () => send({ t: 'keyframe' }),
+});
 const pointer = new PointerController({
   stage: $('stage'),
   viewer,
@@ -27,13 +33,14 @@ const pointer = new PointerController({
 
 // ---- Stats ------------------------------------------------------------------
 
-const stats = { frames: 0, bytes: 0, latency: null, width: 0, height: 0 };
+const stats = { frames: 0, bytes: 0, latency: null, width: 0, height: 0, codec: '' };
 
 setInterval(() => {
   $('stat-fps').textContent = connection.isOpen ? String(stats.frames) : '–';
   $('stat-bandwidth').textContent = connection.isOpen ? `${Math.round((stats.bytes * 8) / 1000)} kbit/s` : '–';
   $('stat-latency').textContent = stats.latency === null ? '–' : `${stats.latency} ms`;
   $('stat-resolution').textContent = stats.width ? `${stats.width} × ${stats.height}` : '–';
+  $('stat-codec').textContent = stats.codec ? (stats.codec === 'h264' ? 'H.264 video' : 'JPEG images') : '–';
   stats.frames = 0;
   stats.bytes = 0;
   send({ t: 'ping', ts: performance.now() });
@@ -54,11 +61,14 @@ connection.addEventListener('close', () => {
   setStatus('Reconnecting…');
 });
 
+// Binary messages: first byte 1 = JPEG image, 2 = H.264 access unit.
 connection.addEventListener('frame', (event) => {
+  const bytes = new Uint8Array(event.detail);
   stats.frames += 1;
-  stats.bytes += event.detail.byteLength;
+  stats.bytes += bytes.byteLength;
   setStatus(null);
-  viewer.pushFrame(event.detail);
+  if (bytes[0] === 2) video.push(bytes.subarray(1));
+  else viewer.pushJpeg(bytes.subarray(1));
 });
 
 connection.addEventListener('message', (event) => {
@@ -76,7 +86,19 @@ connection.addEventListener('message', (event) => {
     case 'streamInfo':
       stats.width = message.width;
       stats.height = message.height;
+      stats.codec = message.codec;
+      if (message.codec !== 'h264') video.close();
       cursor.setDisplayPointWidth(message.pointWidth);
+      break;
+    case 'videoConfig':
+      try {
+        video.configure(message);
+      } catch (error) {
+        // Decoder unavailable after all: switch this device to JPEG.
+        console.warn('[deskbridge] cannot configure H.264 decoder', error);
+        settings.h264Supported = false;
+        send({ t: 'stream', ...settings.streamParams() });
+      }
       break;
     case 'cursor':
       cursor.setRemote(message.x, message.y, message.visible);
@@ -261,6 +283,13 @@ $('set-quality').addEventListener('change', (e) => {
   updateStream();
 });
 
+$('set-codec').value = settings.get('codec');
+$('set-codec').addEventListener('change', (e) => {
+  settings.set('codec', e.target.value);
+  if (e.target.value !== 'jpeg' && !settings.h264Supported) toast('This browser cannot decode H.264; using JPEG');
+  updateStream();
+});
+
 bindRange('set-fps', 'fps', (v) => `${v}`);
 $('set-fps').addEventListener('change', updateStream);
 bindRange('set-trackpad', 'trackpadSpeed', (v) => `${Number(v).toFixed(1)}×`);
@@ -365,7 +394,8 @@ window.addEventListener('focus', () => {
 
 renderMode();
 setToolbarHidden(settings.get('toolbarHidden'));
+settings.h264Supported = await isH264Supported();
 connection.connect();
 
 // Expose for debugging in the browser console.
-window.deskbridge = { settings, connection, viewer, keyboard, clipboard, pointer, cursor };
+window.deskbridge = { settings, connection, viewer, keyboard, clipboard, pointer, cursor, video };

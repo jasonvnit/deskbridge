@@ -32,6 +32,7 @@ export class CursorOverlay {
   #localTime = 0;
   #pointWidth = 0;
   #frameRequested = false;
+  #shapes = new Map();
 
   constructor({ element, viewer }) {
     this.#element = element;
@@ -54,8 +55,14 @@ export class CursorOverlay {
     this.render();
   }
 
-  setShape({ png, hotX, hotY, width, height }) {
-    this.#shape = { url: `data:image/png;base64,${png}`, hotX, hotY, width, height };
+  /** A shape with `png` is new; one with only `id` was sent before and is cached. */
+  setShape({ id, png, hotX, hotY, width, height }) {
+    if (png) {
+      this.#shapes.set(id, { url: `data:image/png;base64,${png}`, hotX, hotY, width, height });
+    }
+    const shape = this.#shapes.get(id);
+    if (!shape) return;
+    this.#shape = shape;
     this.#applyShape();
     this.render();
   }

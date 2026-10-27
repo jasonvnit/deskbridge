@@ -5,7 +5,8 @@ import AppKit
 ///
 /// Events:
 ///   {"type":"cursor","x":0..1,"y":0..1,"visible":bool}
-///   {"type":"cursorShape","png":base64,"hotX":pt,"hotY":pt,"width":pt,"height":pt}
+///   {"type":"cursorShape","id":"…","png":base64,"hotX":pt,"hotY":pt,"width":pt,"height":pt}
+///   {"type":"cursorShape","id":"…"}   (shape already sent during this stream; the client caches it)
 final class CursorTracker {
     private static let interval: DispatchTimeInterval = .milliseconds(33)
 
@@ -14,6 +15,7 @@ final class CursorTracker {
     private var displayID: CGDirectDisplayID = CGMainDisplayID()
     private var lastPosition: (x: Double, y: Double, visible: Bool)?
     private var lastShapeKey: UInt64?
+    private var sentShapes = Set<UInt64>()
 
     init(output: Output) {
         self.output = output
@@ -24,6 +26,7 @@ final class CursorTracker {
             self.displayID = displayID
             self.lastPosition = nil
             self.lastShapeKey = nil
+            self.sentShapes.removeAll()
             guard self.timer == nil else { return }
             let timer = DispatchSource.makeTimerSource(queue: .main)
             timer.schedule(deadline: .now(), repeating: CursorTracker.interval, leeway: .milliseconds(5))
@@ -68,6 +71,11 @@ final class CursorTracker {
         key ^= UInt64(cursor.hotSpot.y * 1000) &* 131
         guard key != lastShapeKey else { return }
         lastShapeKey = key
+        let id = String(key, radix: 36)
+        if sentShapes.contains(key) {
+            output.send(["type": "cursorShape", "id": id])
+            return
+        }
 
         // Render at 2x so the cursor stays sharp on high-density screens.
         let size = image.size
@@ -77,8 +85,10 @@ final class CursorTracker {
               let png = NSBitmapImageRep(cgImage: cgImage).representation(using: .png, properties: [:])
         else { return }
 
+        sentShapes.insert(key)
         output.send([
             "type": "cursorShape",
+            "id": id,
             "png": png.base64EncodedString(),
             "hotX": Double(cursor.hotSpot.x),
             "hotY": Double(cursor.hotSpot.y),

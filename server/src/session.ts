@@ -18,11 +18,17 @@ export const CLOSE_REPLACED = 4001;
 export const CLOSE_SESSION_EXPIRED = 4003;
 
 interface StreamSettings {
+  codec: 'h264' | 'jpeg';
   fps: number;
   quality: number;
+  bitrate: number;
   maxWidth: number;
   displayId: number;
 }
+
+// Binary messages to the browser start with one byte telling what follows.
+const BINARY_JPEG = 1;
+const BINARY_H264 = 2;
 
 interface Client {
   id: string;
@@ -61,7 +67,8 @@ export class SessionHub {
     this.#defaults = defaults;
     this.#notifyOnConnect = notifyOnConnect;
 
-    helper.on('frame', (jpeg: Buffer) => this.#onFrame(jpeg));
+    helper.on('frame', (jpeg: Buffer) => this.#sendBinary(BINARY_JPEG, jpeg));
+    helper.on('video', (accessUnit: Buffer) => this.#sendBinary(BINARY_H264, accessUnit));
     helper.on('event', (event: HelperEvent) => this.#onHelperEvent(event));
     helper.on('ready', () => {
       if (this.#active && !this.#active.paused) this.#startStream(this.#active);
@@ -86,7 +93,14 @@ export class SessionHub {
       ws,
       ip,
       token,
-      stream: { ...this.#defaults, displayId: 0 },
+      stream: {
+        codec: 'jpeg',
+        fps: this.#defaults.fps,
+        quality: this.#defaults.quality,
+        bitrate: this.#defaults.bitrate,
+        maxWidth: this.#defaults.maxWidth,
+        displayId: 0,
+      },
       alive: true,
       paused: false,
       timers: [],
@@ -162,10 +176,10 @@ export class SessionHub {
     this.#helper.send({ type: 'start', ...client.stream });
   }
 
-  #onFrame(jpeg: Buffer): void {
+  #sendBinary(kind: number, payload: Buffer): void {
     const client = this.#active;
     if (!client || client.paused || client.ws.readyState !== client.ws.OPEN) return;
-    client.ws.send(jpeg, { binary: true });
+    client.ws.send(Buffer.concat([Buffer.from([kind]), payload]), { binary: true });
   }
 
   #onHelperEvent(event: HelperEvent): void {
@@ -176,6 +190,7 @@ export class SessionHub {
     } else if (event.type === 'cursorShape') {
       this.#send(client, {
         t: 'cursorShape',
+        id: event.id,
         png: event.png,
         hotX: event.hotX,
         hotY: event.hotY,
@@ -187,11 +202,20 @@ export class SessionHub {
       this.#send(client, {
         t: 'streamInfo',
         displayId: this.#displayId,
+        codec: event.codec,
         width: event.width,
         height: event.height,
         pointWidth: event.pointWidth,
         pointHeight: event.pointHeight,
         fps: event.fps,
+      });
+    } else if (event.type === 'videoConfig') {
+      this.#send(client, {
+        t: 'videoConfig',
+        codec: event.codec,
+        description: event.description,
+        width: event.width,
+        height: event.height,
       });
     } else if (event.type === 'streamError') {
       this.#send(client, { t: 'streamError', message: event.message });
@@ -229,8 +253,10 @@ export class SessionHub {
           log.info(`client from ${client.ip} resumed`);
         }
         client.stream = {
+          codec: message.codec === 'h264' ? 'h264' : 'jpeg',
           fps: Math.round(num(message.fps, client.stream.fps, 1, 60)),
           quality: num(message.quality, client.stream.quality, 0.1, 1),
+          bitrate: Math.round(num(message.bitrate, client.stream.bitrate, 200, 50_000)),
           maxWidth: Math.round(num(message.maxWidth, client.stream.maxWidth, 0, 8192)),
           displayId: Math.round(num(message.displayId, client.stream.displayId, 0, 2 ** 32 - 1)),
         };
@@ -239,6 +265,13 @@ export class SessionHub {
 
       case 'refresh':
         this.#helper.send({ type: 'refresh' });
+        break;
+
+      case 'keyframe':
+        // The browser's decoder lost track (error or reset): restart flow control
+        // and send a fresh key frame.
+        this.#helper.send({ type: 'resetCredits', n: INITIAL_CREDITS });
+        this.#helper.send({ type: 'keyframe' });
         break;
 
       case 'mouse': {
