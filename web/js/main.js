@@ -118,7 +118,17 @@ connection.addEventListener('message', (event) => {
 });
 
 connection.addEventListener('replaced', () => {
-  setStatus('Another device took over this session. Reload the page to take it back.', { error: true });
+  setConnectionState('bad');
+  setStatus('Another device took over this session.', {
+    error: true,
+    action: {
+      label: 'Take back control',
+      onClick: () => {
+        setStatus('Reconnecting…');
+        connection.connect();
+      },
+    },
+  });
 });
 
 connection.addEventListener('unauthorized', () => {

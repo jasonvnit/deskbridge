@@ -11,14 +11,26 @@ export function toast(message, { error = false, duration = 2200 } = {}) {
   }, duration);
 }
 
-export function setStatus(message, { error = false } = {}) {
+/**
+ * Shows a full-screen status message, optionally with one action button
+ * (`action: { label, onClick }`). Pass a falsy message to hide it.
+ */
+export function setStatus(message, { error = false, action = null } = {}) {
   const overlay = document.getElementById('status-overlay');
+  const button = document.getElementById('status-action');
+  button.onclick = null;
+  button.hidden = true;
   if (!message) {
     overlay.hidden = true;
     return;
   }
   document.getElementById('status-text').textContent = message;
   overlay.classList.toggle('error', error);
+  if (action) {
+    button.textContent = action.label;
+    button.onclick = action.onClick;
+    button.hidden = false;
+  }
   overlay.hidden = false;
 }
 

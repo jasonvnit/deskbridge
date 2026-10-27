@@ -570,3 +570,14 @@ input[type="text"] {
   height: 44px;
   fill: var(--accent);
 }
+
+.status-action {
+  min-width: 200px;
+  min-height: 48px;
+  margin-top: 4px;
+  font-size: 17px;
+}
+
+.status-action[hidden] {
+  display: none;
+}

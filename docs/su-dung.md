@@ -8,7 +8,7 @@
 
 **Mẹo:** trên iPad/iPhone (Safari), bấm **Chia sẻ → Thêm vào MH chính**. Mở DeskBridge từ biểu tượng trên màn hình chính sẽ được toàn màn hình, không có thanh địa chỉ.
 
-Chỉ **một thiết bị** điều khiển được tại một thời điểm. Khi thiết bị thứ hai kết nối, thiết bị thứ nhất sẽ bị ngắt và thấy thông báo. Muốn lấy lại quyền điều khiển, tải lại trang trên thiết bị thứ nhất.
+Chỉ **một thiết bị** điều khiển được tại một thời điểm. Khi thiết bị thứ hai kết nối, thiết bị thứ nhất sẽ bị ngắt và thấy thông báo. Muốn lấy lại quyền điều khiển, bấm **Take back control** trên thiết bị thứ nhất (không cần tải lại trang).
 
 ## Thanh công cụ
 

@@ -33,7 +33,7 @@ Cách xử lý:
 3. Nếu đã bật mà vẫn lỗi: tắt công tắc, bấm `−` để xóa ứng dụng khỏi danh sách, thêm lại, rồi mở lại ứng dụng terminal.
 4. Chạy `scripts/stop.sh && scripts/start.sh`.
 
-**`start.sh` báo "macOS blocked a test screen capture"** hoặc stream báo **"application connection being interrupted"**: macOS đang chặn helper. `start.sh` đã tự chạy mỗi bản build helper từ một thư mục riêng (`~/.deskbridge/bin/<mã-chữ-ký>/`) để tránh trường hợp quyền cũ không khớp sau khi build lại. Nếu vẫn bị chặn, mở **Screen & System Audio Recording**, xóa (`−`) các mục `deskbridge-helper`, bật công tắc cho ứng dụng terminal dùng để chạy script, rồi chạy lại `scripts/start.sh`.
+**`start.sh` báo "macOS blocked a test screen capture"** hoặc stream báo **"application connection being interrupted"**: macOS đang chặn helper. `start.sh` đã tự chạy mỗi bản build helper từ một thư mục riêng (`~/.deskbridge/bin/<mã-chữ-ký>/`) để tránh trường hợp quyền cũ không khớp sau khi build lại. Lỗi này cũng xảy ra khi **hai bản DeskBridge cùng chạy một file helper** (ví dụ chạy thêm một server thử nghiệm bằng `npm run dev` trong lúc `start.sh` đang chạy): macOS ngắt phiên chụp của một bên. Chỉ chạy một bản tại một thời điểm. Nếu vẫn bị chặn, mở **Screen & System Audio Recording**, xóa (`−`) các mục `deskbridge-helper`, bật công tắc cho ứng dụng terminal dùng để chạy script, rồi chạy lại `scripts/start.sh`.
 
 Kiểm tra nhanh trạng thái quyền:
 
@@ -59,7 +59,7 @@ helper-macos/.build/release/deskbridge-helper permissions
 | `Wrong password` | Kiểm tra `DESKBRIDGE_PASSWORD` trong `.env` trên Mac. Nếu mật khẩu chứa ký tự đặc biệt, bọc trong dấu nháy đơn. |
 | `Too many attempts` | Chờ hết thời gian khóa (15–30 phút), hoặc khởi động lại DeskBridge trên Mac. |
 | Bị đăng xuất liên tục | Phiên hết hạn do không dùng (`DESKBRIDGE_SESSION_IDLE_MINUTES`) hoặc server đã khởi động lại. |
-| "Another device took over this session" | Có thiết bị khác vừa kết nối. Tải lại trang để lấy lại quyền điều khiển. |
+| "Another device took over this session" | Có thiết bị khác vừa kết nối. Bấm **Take back control** để lấy lại quyền điều khiển. |
 
 ## Hình ảnh và độ trễ
 
