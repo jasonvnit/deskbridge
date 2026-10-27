@@ -51,6 +51,18 @@ Phù hợp khi cần click chính xác vào nút nhỏ. Một chấm tròn màu 
 | Kéo 2 ngón | Cuộn |
 | Chụm/mở 2 ngón | Phóng to/thu nhỏ khung nhìn; khung nhìn tự đi theo con trỏ |
 
+### Con trỏ Mac đi theo lúc nào (⚙ → Mac pointer)
+
+Con trỏ trên màn hình DeskBridge luôn đi theo tay bạn ngay lập tức. Cài đặt **Mac pointer** quyết định khi nào con trỏ **thật trên Mac** đi theo:
+
+| Lựa chọn | Hành vi | Khi nào dùng |
+|---|---|---|
+| **Follows when you pause** (mặc định) | Con trỏ Mac nhảy tới khi bạn dừng tay khoảng 0,25 giây | Dùng hằng ngày: không còn cảnh con trỏ Mac "đuổi theo", vẫn có tooltip/menu hover khi dừng lại |
+| **Follows every move** | Con trỏ Mac theo từng chuyển động | Cần hover liên tục (ví dụ vẽ, kéo thanh trượt bằng hover) |
+| **Moves only when you click** | Con trỏ Mac chỉ nhảy khi click, cuộn hoặc kéo thả; con trỏ hiển thị dạng mũi tên cố định | Có người khác đang dùng Mac trực tiếp, hoặc mạng rất chậm |
+
+Ở mọi lựa chọn, **click, cuộn và kéo thả luôn thực hiện đúng tại vị trí con trỏ** trên màn hình DeskBridge. Trong lúc kéo thả, chuyển động luôn được gửi liên tục.
+
 ### Chuột hoặc trackpad của tablet
 
 Khi dùng iPad với Magic Keyboard/trackpad, hoặc khi mở trên laptop, con trỏ thật được ánh xạ trực tiếp: di chuyển, click trái/phải, cuộn đều hoạt động như bình thường.

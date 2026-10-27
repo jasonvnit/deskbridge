@@ -309,6 +309,13 @@ bindCheckbox('set-copy-sync', 'copySync');
 bindCheckbox('set-pause-on-blur', 'pauseOnBlur');
 
 $('set-mode').addEventListener('change', (e) => settings.set('mode', e.target.value));
+
+$('set-pointer-sync').value = settings.get('pointerSync');
+cursor.setDetached(settings.get('pointerSync') === 'click');
+$('set-pointer-sync').addEventListener('change', (e) => {
+  settings.set('pointerSync', e.target.value);
+  cursor.setDetached(e.target.value === 'click');
+});
 settings.addEventListener('change', (e) => {
   if (e.detail.key === 'mode') renderMode();
 });

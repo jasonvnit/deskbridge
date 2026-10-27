@@ -6,6 +6,10 @@ const SCROLL_THRESHOLD = 6;
 const WHEEL_LINE_PX = 16;
 
 const MOUSE_BUTTONS = { 0: 'left', 1: 'middle', 2: 'right' };
+// "When resting" pointer sync: the Mac pointer follows once the local pointer stops this long.
+const RESTING_DELAY_MS = 250;
+// Moves smaller than this (normalized) are not worth sending before a click or scroll.
+const SAME_POINT_EPSILON = 0.0005;
 
 function vibrate() {
   navigator.vibrate?.(10);
@@ -19,6 +23,13 @@ function vibrate() {
  *                         two-finger drag = scroll, two-finger tap = right click, pinch = zoom.
  * Touch, "trackpad" mode: drag = move pointer, tap = click, hold then drag = drag,
  *                         two-finger drag = scroll, two-finger tap = right click, pinch = zoom.
+ *
+ * "Mac pointer" setting (pointerSync) decides when plain pointer moves reach the Mac:
+ *   live:    every move (the Mac pointer follows continuously)
+ *   resting: once the local pointer rests for RESTING_DELAY_MS
+ *   click:   never on its own
+ * Clicks, scrolls and drags always move the Mac pointer to the right place first,
+ * and moves while a button is held are always sent live.
  */
 export class PointerController {
   #stage;
@@ -31,6 +42,10 @@ export class PointerController {
   #gesture = null;
   #cursor = { x: 0.5, y: 0.5 };
   #pendingMove = null;
+  #localPoint = null;
+  #lastSent = null;
+  #restingTimer = 0;
+  #buttonsHeld = new Set();
   #scroll = { dx: 0, dy: 0, x: null, y: null };
   #frameRequested = false;
   #seq = 0;
@@ -65,10 +80,22 @@ export class PointerController {
 
   // ---- Sending ------------------------------------------------------------
 
+  get #pointerSync() {
+    return this.#settings.get('pointerSync');
+  }
+
+  /** Moves the local pointer; whether the Mac follows now depends on pointerSync. */
   #queueMove(point) {
-    this.#pendingMove = point;
+    this.#localPoint = point;
     this.#cursorOverlay.showLocal(point);
-    this.#requestFlush();
+    clearTimeout(this.#restingTimer);
+
+    if (this.#pointerSync === 'live' || this.#buttonsHeld.size > 0) {
+      this.#pendingMove = point;
+      this.#requestFlush();
+    } else if (this.#pointerSync === 'resting') {
+      this.#restingTimer = setTimeout(() => this.#syncNow(), RESTING_DELAY_MS);
+    }
   }
 
   #flushMove() {
@@ -78,14 +105,30 @@ export class PointerController {
     this.#sendPositioned({ t: 'mouse', action: 'move', x, y });
   }
 
+  /** Moves the Mac pointer to `point` (default: the local pointer) right away, if it is not there yet. */
+  #syncNow(point = this.#localPoint) {
+    clearTimeout(this.#restingTimer);
+    this.#pendingMove = null;
+    if (!point) return;
+    const last = this.#lastSent;
+    if (last && Math.abs(last.x - point.x) < SAME_POINT_EPSILON && Math.abs(last.y - point.y) < SAME_POINT_EPSILON) return;
+    this.#sendPositioned({ t: 'mouse', action: 'move', x: point.x, y: point.y });
+  }
+
   #button(action, button, point) {
-    this.#flushMove();
+    this.#localPoint = point;
+    // Hover first, so the target sees the pointer arrive before the press (like a real mouse).
+    if (action === 'down') this.#syncNow(point);
+    else this.#flushMove();
+    if (action === 'down') this.#buttonsHeld.add(button);
+    else this.#buttonsHeld.delete(button);
     this.#sendPositioned({ t: 'mouse', action, button, x: point.x, y: point.y });
   }
 
   /** Sends a mouse message that moves the pointer, numbered so the Mac can echo it back. */
   #sendPositioned(message) {
     this.#seq += 1;
+    this.#lastSent = { x: message.x, y: message.y };
     this.#cursorOverlay.setLocal({ x: message.x, y: message.y }, this.#seq);
     this.#send({ ...message, seq: this.#seq });
   }
@@ -96,6 +139,8 @@ export class PointerController {
   }
 
   #queueScroll(dx, dy, point) {
+    // macOS scrolls the window under the Mac pointer, so bring it to the local pointer first.
+    this.#syncNow();
     this.#scroll.dx += dx;
     this.#scroll.dy += dy;
     if (point) {
@@ -130,7 +175,11 @@ export class PointerController {
       return;
     }
     e.preventDefault();
-    this.#stage.setPointerCapture?.(e.pointerId);
+    try {
+      this.#stage.setPointerCapture(e.pointerId);
+    } catch {
+      // Not capturable (e.g. the pointer is already gone); events still arrive on the stage.
+    }
 
     if (e.pointerType === 'touch') {
       this.#touchDown(e);

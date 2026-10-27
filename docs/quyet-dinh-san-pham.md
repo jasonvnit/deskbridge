@@ -32,23 +32,25 @@ Danh sách các quyết định đã chốt cho DeskBridge. Khi thay đổi mộ
 
 | 13 | **Mặc định**: chất lượng hình **Max** và chế độ điều khiển **Trackpad**. Người dùng đổi được trong cài đặt, lưu riêng trên từng thiết bị. | Ưu tiên hình nét và điều khiển con trỏ chính xác; khi mạng yếu có thể hạ xuống Balanced/High. |
 
+| 14 | **Con trỏ Mac đi theo khi người dùng dừng tay** (~0,25 giây) thay vì theo từng chuyển động; click, cuộn, kéo thả luôn đúng tọa độ. Có thể đổi sang "theo từng chuyển động" hoặc "chỉ khi click". | Bỏ cảnh con trỏ Mac đuổi theo qua tunnel mà vẫn giữ tooltip và menu hover. |
+
 ## Kỹ thuật
 
 | # | Quyết định | Lý do |
 |---|---|---|
-| 14 | Kiến trúc **server Node.js + helper Swift** giao tiếp qua stdin/stdout. | API gốc của macOS ổn định và hỗ trợ Unicode tốt; các thư viện điều khiển input cho Node.js không còn được bảo trì hoặc đã chuyển sang trả phí. |
-| 15 | Truyền hình ảnh qua **WebSocket**, mặc định bằng **video H.264** (mã hóa phần cứng VideoToolbox, giải mã bằng WebCodecs), **dự phòng bằng ảnh JPEG** cho trình duyệt không hỗ trợ. Có kiểm soát luồng theo credit. | Cloudflare Tunnel không chuyển được media UDP của WebRTC. Đo thực tế qua tunnel, băng thông lên chỉ khoảng 5–6 Mbit/s: JPEG chỉ đạt 5–10 fps, H.264 chỉ gửi phần thay đổi nên đạt 20–30 fps ở độ phân giải cao hơn. |
-| 16 | **Con trỏ chuột không nằm trong video**: Mac gửi riêng vị trí và hình dạng, trình duyệt vẽ con trỏ ngay tại vị trí tay người dùng. | Con trỏ không phải chờ khung hình đi qua tunnel, nên không bị trễ. |
-| 17 | Phím từ bàn phím rời được gửi **theo vị trí vật lý**; văn bản từ bàn phím ảo/IME được gửi **dạng Unicode**. | Phím tắt hoạt động đúng với bàn phím rời; tiếng Việt từ điện thoại giữ nguyên dấu. |
-| 18 | Giao diện web **không framework, không bước build**; server TypeScript chạy trực tiếp bằng Node.js. | Ít phụ thuộc, dễ đọc, dễ đóng góp. |
+| 15 | Kiến trúc **server Node.js + helper Swift** giao tiếp qua stdin/stdout. | API gốc của macOS ổn định và hỗ trợ Unicode tốt; các thư viện điều khiển input cho Node.js không còn được bảo trì hoặc đã chuyển sang trả phí. |
+| 16 | Truyền hình ảnh qua **WebSocket**, mặc định bằng **video H.264** (mã hóa phần cứng VideoToolbox, giải mã bằng WebCodecs), **dự phòng bằng ảnh JPEG** cho trình duyệt không hỗ trợ. Có kiểm soát luồng theo credit. | Cloudflare Tunnel không chuyển được media UDP của WebRTC. Đo thực tế qua tunnel, băng thông lên chỉ khoảng 5–6 Mbit/s: JPEG chỉ đạt 5–10 fps, H.264 chỉ gửi phần thay đổi nên đạt 20–30 fps ở độ phân giải cao hơn. |
+| 17 | **Con trỏ chuột không nằm trong video**: Mac gửi riêng vị trí và hình dạng, trình duyệt vẽ con trỏ ngay tại vị trí tay người dùng. | Con trỏ không phải chờ khung hình đi qua tunnel, nên không bị trễ. |
+| 18 | Phím từ bàn phím rời được gửi **theo vị trí vật lý**; văn bản từ bàn phím ảo/IME được gửi **dạng Unicode**. | Phím tắt hoạt động đúng với bàn phím rời; tiếng Việt từ điện thoại giữ nguyên dấu. |
+| 19 | Giao diện web **không framework, không bước build**; server TypeScript chạy trực tiếp bằng Node.js. | Ít phụ thuộc, dễ đọc, dễ đóng góp. |
 
 ## Quy ước dự án
 
 | # | Quyết định |
 |---|---|
-| 19 | Tài liệu (README, docs) viết bằng **tiếng Việt**. |
-| 20 | Code, comment trong code, giao diện người dùng, log và thông điệp của script dùng **tiếng Anh**. |
-| 21 | Repository **công khai**, giấy phép MIT. Không commit bí mật (`.env`, credentials của tunnel). |
+| 20 | Tài liệu (README, docs) viết bằng **tiếng Việt**. |
+| 21 | Code, comment trong code, giao diện người dùng, log và thông điệp của script dùng **tiếng Anh**. |
+| 22 | Repository **công khai**, giấy phép MIT. Không commit bí mật (`.env`, credentials của tunnel). |
 
 ## Hướng phát triển (chưa chốt thời gian)
 

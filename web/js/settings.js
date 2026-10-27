@@ -20,6 +20,8 @@ const DEFAULTS = {
   fps: QUALITY_PRESETS.max.fps,
   displayId: 0,
   mode: 'trackpad',
+  // When plain pointer moves reach the Mac: 'live', 'resting' (after a short pause) or 'click'.
+  pointerSync: 'resting',
   trackpadSpeed: 1.4,
   scrollSpeed: 1.6,
   pasteSync: true,

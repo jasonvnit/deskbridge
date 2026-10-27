@@ -38,10 +38,15 @@ export class CursorOverlay {
   #local = null;
   #localSeq = 0;
   #localTime = 0;
+  /** The local pointer moved and the Mac has not been told yet (resting / click-only sync). */
+  #unsent = false;
+  /** Click-only sync: the Mac's cursor shape describes another spot, so show a plain arrow. */
+  #detached = false;
   #fallbackTimer = 0;
   #pointWidth = 0;
   #frameRequested = false;
   #shapes = new Map();
+  #macShape = DEFAULT_SHAPE;
 
   constructor({ element, viewer }) {
     this.#element = element;
@@ -57,6 +62,7 @@ export class CursorOverlay {
   /** True while local input is ahead of what the Mac has confirmed. */
   get isLocallyDriven() {
     if (!this.#local) return false;
+    if (this.#unsent) return true;
     const age = performance.now() - this.#localTime;
     if (age < LOCAL_MIN_MS) return true;
     if (age > LOCAL_MAX_MS) return false;
@@ -75,7 +81,17 @@ export class CursorOverlay {
     }
     const shape = this.#shapes.get(id);
     if (!shape) return;
+    this.#macShape = shape;
+    if (this.#detached) return;
     this.#shape = shape;
+    this.#applyShape();
+    this.render();
+  }
+
+  /** Click-only sync shows a plain arrow; other modes show the Mac's real cursor shape. */
+  setDetached(detached) {
+    this.#detached = detached;
+    this.#shape = detached ? DEFAULT_SHAPE : this.#macShape;
     this.#applyShape();
     this.render();
   }
@@ -85,10 +101,11 @@ export class CursorOverlay {
     if (!this.isLocallyDriven) this.render();
   }
 
-  /** Shows a pointer position immediately (before it is sent). */
+  /** Shows a pointer position immediately (before it is sent, or without sending it). */
   showLocal(point) {
     this.#local = { x: point.x, y: point.y };
     this.#localTime = performance.now();
+    this.#unsent = true;
     this.render();
   }
 
@@ -96,6 +113,7 @@ export class CursorOverlay {
   setLocal(point, seq) {
     this.#localSeq = seq;
     this.showLocal(point);
+    this.#unsent = false;
     clearTimeout(this.#fallbackTimer);
     this.#fallbackTimer = setTimeout(() => this.render(), LOCAL_MAX_MS + 50);
   }

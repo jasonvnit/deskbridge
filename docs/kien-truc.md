@@ -116,6 +116,8 @@ Web client gửi `pause` khi trang bị ẩn (`visibilitychange`, `pagehide`) ho
 
 Video không chứa con trỏ. `CursorTracker` trong helper đọc vị trí (~30 Hz) và hình dạng con trỏ hệ thống (`NSCursor.currentSystem`), gửi riêng. Trình duyệt vẽ con trỏ bằng một phần tử `<img>` phủ lên canvas, tại vị trí cục bộ ngay khi người dùng di chuyển. Mỗi lệnh chuột mang một số thứ tự `seq`, và Mac gửi kèm `seq` của lệnh cuối cùng đã thực hiện trong mỗi báo cáo vị trí. Trình duyệt giữ vị trí cục bộ cho tới khi nhận được báo cáo có `seq` mới bằng lệnh gần nhất; các báo cáo cũ hơn (vẫn đang trên đường qua tunnel) bị bỏ qua, nên con trỏ không bị giật ngược về vị trí cũ. Nếu sau 3 giây vẫn chưa có xác nhận, trình duyệt quay về dùng vị trí Mac gửi.
 
+**Đồng bộ con trỏ (`pointerSync`)**: chuyển động thường (không giữ nút) chỉ được gửi theo cài đặt: `live` gửi mọi chuyển động (gộp theo khung hình), `resting` gửi một lệnh `move` khi con trỏ đứng yên 250 ms, `click` không gửi. Trước khi nhấn nút hoặc cuộn, trình duyệt luôn gửi `move` tới vị trí con trỏ cục bộ (macOS cuộn cửa sổ dưới con trỏ Mac); trong lúc giữ nút, mọi chuyển động được gửi ngay. Khi con trỏ cục bộ đã di chuyển mà chưa gửi, lớp vẽ con trỏ giữ vị trí cục bộ (không lấy vị trí Mac).
+
 ### Kiểm soát luồng (flow control)
 
 DeskBridge không đẩy khung hình liên tục mà dùng cơ chế "tín dụng" (credit):
