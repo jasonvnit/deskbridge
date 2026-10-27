@@ -1,16 +1,18 @@
 const STORAGE_KEY = 'deskbridge.settings.v1';
 
+// Measured through Cloudflare Tunnel with ~5-6 Mbit/s upload on a busy 3440x1440 screen:
+// low ~35 KB/frame (~20 fps), balanced ~65 KB (~10 fps), high ~130 KB (~5 fps).
 export const QUALITY_PRESETS = {
-  low: { quality: 0.35, maxWidth: 1280, fps: 10 },
-  balanced: { quality: 0.5, maxWidth: 1600, fps: 15 },
-  high: { quality: 0.7, maxWidth: 2560, fps: 20 },
-  max: { quality: 0.85, maxWidth: 0, fps: 24 },
+  low: { quality: 0.3, maxWidth: 1024, fps: 24 },
+  balanced: { quality: 0.4, maxWidth: 1280, fps: 20 },
+  high: { quality: 0.55, maxWidth: 1600, fps: 20 },
+  max: { quality: 0.8, maxWidth: 0, fps: 24 },
 };
 
 const DEFAULTS = {
   // 'server' uses the defaults from the server's .env.
   qualityPreset: 'server',
-  fps: 15,
+  fps: 20,
   displayId: 0,
   mode: 'touch',
   trackpadSpeed: 1.4,

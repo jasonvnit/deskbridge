@@ -52,9 +52,9 @@ Các biến quan trọng (danh sách đầy đủ có trong `.env.example`):
 | `DESKBRIDGE_PORT` | `8765` | Port của server local |
 | `DESKBRIDGE_SESSION_TTL_HOURS` | `12` | Thời gian tối đa của một phiên đăng nhập |
 | `DESKBRIDGE_SESSION_IDLE_MINUTES` | `60` | Tự đăng xuất sau bao nhiêu phút không dùng |
-| `DESKBRIDGE_STREAM_FPS` | `15` | Số khung hình/giây mặc định |
-| `DESKBRIDGE_STREAM_QUALITY` | `50` | Chất lượng JPEG mặc định (10–100) |
-| `DESKBRIDGE_STREAM_MAX_WIDTH` | `1600` | Chiều rộng tối đa của khung hình (px), `0` = độ phân giải gốc |
+| `DESKBRIDGE_STREAM_FPS` | `20` | Số khung hình/giây mặc định |
+| `DESKBRIDGE_STREAM_QUALITY` | `40` | Chất lượng JPEG mặc định (10–100) |
+| `DESKBRIDGE_STREAM_MAX_WIDTH` | `1280` | Chiều rộng tối đa của khung hình (px), `0` = độ phân giải gốc |
 | `DESKBRIDGE_NOTIFY_ON_CONNECT` | `true` | Hiện thông báo trên Mac khi có thiết bị kết nối |
 | `DESKBRIDGE_TUNNEL_MODE` | `named` | `named`, `quick` hoặc `none` (xem mục 5) |
 | `DESKBRIDGE_TUNNEL_NAME` | `deskbridge` | Tên tunnel trên Cloudflare |

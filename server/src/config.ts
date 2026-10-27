@@ -58,9 +58,9 @@ export function loadConfig(): Config {
     sessionTtlMs: readInt('DESKBRIDGE_SESSION_TTL_HOURS', 12, 1, 720) * 3_600_000,
     sessionIdleMs: readInt('DESKBRIDGE_SESSION_IDLE_MINUTES', 60, 1, 10_080) * 60_000,
     stream: {
-      fps: readInt('DESKBRIDGE_STREAM_FPS', 15, 1, 60),
-      quality: readInt('DESKBRIDGE_STREAM_QUALITY', 50, 10, 100) / 100,
-      maxWidth: readInt('DESKBRIDGE_STREAM_MAX_WIDTH', 1600, 0, 8192),
+      fps: readInt('DESKBRIDGE_STREAM_FPS', 20, 1, 60),
+      quality: readInt('DESKBRIDGE_STREAM_QUALITY', 40, 10, 100) / 100,
+      maxWidth: readInt('DESKBRIDGE_STREAM_MAX_WIDTH', 1280, 0, 8192),
     },
     helperPath:
       process.env.DESKBRIDGE_HELPER_PATH?.trim() ||
