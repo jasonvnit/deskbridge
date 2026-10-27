@@ -93,7 +93,7 @@ Tọa độ chuột được chuẩn hóa về khoảng 0–1 theo màn hình đ
 | `welcome` | `defaults` | (xem trên) |
 | `streamInfo` | `displayId`, `codec`, `width`, `height`, `pointWidth`, `pointHeight`, `fps` | Stream đã bắt đầu (`pointWidth/Height`: kích thước màn hình theo point, dùng để scale con trỏ) |
 | `videoConfig` | `codec` (ví dụ `avc1.640C28`), `description` (avcC, base64), `width`, `height` | Cấu hình decoder; gửi trước keyframe đầu tiên và khi tham số thay đổi |
-| `cursor` | `x`, `y` (0–1), `visible`, `seq` | Vị trí con trỏ trên Mac (~30 lần/giây khi thay đổi); `seq` là số thứ tự của lệnh chuột cuối cùng Mac đã thực hiện trước khi đọc vị trí |
+| `cursor` | `x`, `y` (0–1), `visible`, `seq` | Vị trí con trỏ trên Mac (~30 lần/giây khi thay đổi); `seq` là số thứ tự của lệnh chuột gần nhất mà con trỏ đã thực sự tới đích (hoặc đã quá 250 ms). Mỗi kết nối đánh số lại từ 1, helper luôn lấy số mới nhất chứ không lấy số lớn nhất |
 | `cursorShape` | `id`, và lần đầu kèm `png` (base64), `hotX`, `hotY`, `width`, `height` (point) | Hình dạng con trỏ; các lần sau chỉ gửi `id` để trình duyệt dùng lại bản đã lưu |
 | `streamError` | `message` | Lỗi chụp màn hình (thường do thiếu quyền) |
 | `pong` | `ts` | Trả lời `ping` |

@@ -66,14 +66,21 @@ final class InputInjector {
     private var pressedButtons = Set<Int>()
     private var point = CGPoint.zero
     private let seqLock = NSLock()
-    private var lastAppliedSeq = 0
+    private var lastApplied = AppliedMove(seq: 0, point: .zero, time: 0)
 
-    /// Sequence number of the last mouse command applied. Sent back with cursor
+    struct AppliedMove {
+        let seq: Int
+        /// Where the pointer was sent, in global display coordinates.
+        let point: CGPoint
+        let time: TimeInterval
+    }
+
+    /// The last mouse command applied. Its sequence number is sent back with cursor
     /// positions so the client can ignore positions older than its own input.
-    var appliedSeq: Int {
+    var appliedMove: AppliedMove {
         seqLock.lock()
         defer { seqLock.unlock() }
-        return lastAppliedSeq
+        return lastApplied
     }
     private var lastClick: LastClick?
     private var clickCount = 1
@@ -84,9 +91,12 @@ final class InputInjector {
         lock.lock()
         defer {
             lock.unlock()
+            // Each client numbers its moves from 1, so after a reload or a new device the
+            // numbers start over: always take the latest value, never the maximum.
             if let seq = message["seq"] as? Int {
+                let move = AppliedMove(seq: seq, point: point, time: ProcessInfo.processInfo.systemUptime)
                 seqLock.lock()
-                lastAppliedSeq = max(lastAppliedSeq, seq)
+                lastApplied = move
                 seqLock.unlock()
             }
         }

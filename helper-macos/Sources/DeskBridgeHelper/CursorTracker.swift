@@ -15,13 +15,19 @@ final class CursorTracker {
     private var timer: DispatchSourceTimer?
     private var displayID: CGDirectDisplayID = CGMainDisplayID()
     private var lastPosition: (x: Double, y: Double, visible: Bool, seq: Int)?
-    private let appliedSeq: () -> Int
+    private let appliedMove: () -> InputInjector.AppliedMove
+    /// Sequence number reported to the client: only once the pointer is really there.
+    private var confirmedSeq = 0
     private var lastShapeKey: UInt64?
     private var sentShapes = Set<UInt64>()
 
-    init(output: Output, appliedSeq: @escaping () -> Int) {
+    /// A posted move counts as done once the pointer is this close, or after this long.
+    private static let arrivalDistance: CGFloat = 3
+    private static let arrivalTimeout: TimeInterval = 0.25
+
+    init(output: Output, appliedMove: @escaping () -> InputInjector.AppliedMove) {
         self.output = output
-        self.appliedSeq = appliedSeq
+        self.appliedMove = appliedMove
     }
 
     func start(displayID: CGDirectDisplayID) {
@@ -47,9 +53,17 @@ final class CursorTracker {
     }
 
     private func tick() {
-        // Read the sequence first: the position read afterwards includes at least those moves.
-        let seq = appliedSeq()
+        // Read the last move first, then the position. macOS applies posted events
+        // asynchronously, so confirm a move only once the pointer has arrived.
+        let move = appliedMove()
         guard let location = CGEvent(source: nil)?.location else { return }
+        if move.seq != confirmedSeq {
+            let arrived = hypot(location.x - move.point.x, location.y - move.point.y) <= CursorTracker.arrivalDistance
+            if arrived || ProcessInfo.processInfo.systemUptime - move.time > CursorTracker.arrivalTimeout {
+                confirmedSeq = move.seq
+            }
+        }
+        let seq = confirmedSeq
         let bounds = CGDisplayBounds(displayID)
         let visible = bounds.width > 0 && bounds.contains(location)
         let x = bounds.width > 0 ? Double((location.x - bounds.minX) / bounds.width) : 0

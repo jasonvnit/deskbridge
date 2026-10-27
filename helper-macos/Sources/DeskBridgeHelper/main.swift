@@ -54,7 +54,7 @@ final class Controller {
     private lazy var capture: ScreenCapture = {
         let capture = ScreenCapture(output: output)
         let input = self.input
-        let cursor = CursorTracker(output: output, appliedSeq: { input.appliedSeq })
+        let cursor = CursorTracker(output: output, appliedMove: { input.appliedMove })
         capture.onStart = { cursor.start(displayID: $0) }
         capture.onStop = { cursor.stop() }
         return capture
