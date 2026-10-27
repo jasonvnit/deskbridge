@@ -33,7 +33,7 @@ Cách xử lý:
 3. Nếu đã bật mà vẫn lỗi: tắt công tắc, bấm `−` để xóa ứng dụng khỏi danh sách, thêm lại, rồi mở lại ứng dụng terminal.
 4. Chạy `scripts/stop.sh && scripts/start.sh`.
 
-**`start.sh` báo "macOS blocked a test screen capture"** hoặc stream báo **"application connection being interrupted"**: macOS đang chặn helper. `start.sh` đã tự chạy mỗi bản build helper từ một thư mục riêng (`~/.deskbridge/bin/<mã-chữ-ký>/`) để tránh trường hợp quyền cũ không khớp sau khi build lại. Nếu vẫn bị chặn: Điều này có thể xảy ra khi `setup.sh` hỏi quyền lúc chạy từ một terminal chưa được cấp quyền (ví dụ terminal tích hợp của VS Code). Mở **Screen & System Audio Recording**, tìm mục `deskbridge-helper`: bật công tắc, hoặc xóa mục đó (`−`) rồi chạy lại `scripts/start.sh` từ terminal đã được cấp quyền.
+**`start.sh` báo "macOS blocked a test screen capture"** hoặc stream báo **"application connection being interrupted"**: macOS đang chặn helper. `start.sh` đã tự chạy mỗi bản build helper từ một thư mục riêng (`~/.deskbridge/bin/<mã-chữ-ký>/`) để tránh trường hợp quyền cũ không khớp sau khi build lại. Nếu vẫn bị chặn, mở **Screen & System Audio Recording**, xóa (`−`) các mục `deskbridge-helper`, bật công tắc cho ứng dụng terminal dùng để chạy script, rồi chạy lại `scripts/start.sh`.
 
 Kiểm tra nhanh trạng thái quyền:
 
