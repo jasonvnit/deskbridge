@@ -55,8 +55,15 @@ final class Controller {
         let capture = ScreenCapture(output: output)
         let input = self.input
         let cursor = CursorTracker(output: output, appliedMove: { input.appliedMove })
-        capture.onStart = { cursor.start(displayID: $0) }
-        capture.onStop = { cursor.stop() }
+        let localInput = LocalInputMonitor(output: output)
+        capture.onStart = {
+            cursor.start(displayID: $0)
+            localInput.start()
+        }
+        capture.onStop = {
+            cursor.stop()
+            localInput.stop()
+        }
         return capture
     }()
     private let input = InputInjector()

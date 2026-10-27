@@ -149,6 +149,15 @@ Nếu **3 phút** không có thao tác nào trên DeskBridge (chạm, rê, click
 
 Thời gian chờ chỉnh trong `.env` của Mac bằng `DESKBRIDGE_IDLE_PAUSE_MINUTES` (đặt `0` để tắt).
 
+### Tự ngủ khi có người dùng Mac trực tiếp
+
+Khi có người **dùng bàn phím, chuột hoặc trackpad của chính máy Mac** trong lúc đang điều khiển từ xa, phiên điều khiển **ngủ ngay lập tức** và hiện overlay **Mac in use**. Mac lập tức nhả mọi phím, ngừng stream và bỏ qua thao tác từ xa, không cần chờ thiết bị điều khiển phản hồi.
+
+- Bấm phím, click hoặc cuộn trên Mac sẽ kích hoạt ngay. Rê chuột phải đủ một quãng ngắn (lỡ chạm bàn không tính).
+- Thao tác do DeskBridge gửi từ xa không bao giờ bị tính là người dùng tại chỗ.
+- Bấm **Wake up** để điều khiển tiếp. Nếu người ở Mac vẫn đang dùng, phiên sẽ ngủ lại.
+- Tắt tính năng này bằng `DESKBRIDGE_SLEEP_ON_LOCAL_INPUT=false` trong `.env`.
+
 ## Cài đặt (⚙)
 
 | Mục | Ý nghĩa |

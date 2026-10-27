@@ -91,6 +91,10 @@ connection.addEventListener('message', (event) => {
       if (message.codec !== 'h264') video.close();
       cursor.setDisplayPointWidth(message.pointWidth);
       break;
+    case 'sleep':
+      // The server already stopped the stream and input; show the overlay.
+      pause(message.reason === 'local' ? 'local' : 'idle');
+      break;
     case 'videoConfig':
       try {
         video.configure(message);
@@ -373,6 +377,11 @@ const PAUSE_REASONS = {
     title: 'Paused',
     text: 'Remote control was paused while you were away. The Mac is not being streamed or controlled.',
     button: 'Resume',
+  },
+  local: {
+    title: 'Mac in use',
+    text: 'Someone is using the Mac\'s own keyboard or mouse, so remote control went to sleep to avoid getting in each other\'s way.',
+    button: 'Wake up',
   },
   idle: {
     title: 'Sleeping',

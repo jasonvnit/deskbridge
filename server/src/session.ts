@@ -59,15 +59,22 @@ export class SessionHub {
   readonly #defaults: StreamDefaults;
   readonly #notifyOnConnect: boolean;
   readonly #idlePauseMinutes: number;
+  readonly #sleepOnLocalInput: boolean;
   #active: Client | null = null;
   #displayId = 0;
 
-  constructor(helper: Helper, auth: Auth, defaults: StreamDefaults, notifyOnConnect: boolean, idlePauseMinutes: number) {
+  constructor(
+    helper: Helper,
+    auth: Auth,
+    defaults: StreamDefaults,
+    options: { notifyOnConnect: boolean; idlePauseMinutes: number; sleepOnLocalInput: boolean },
+  ) {
     this.#helper = helper;
     this.#auth = auth;
     this.#defaults = defaults;
-    this.#notifyOnConnect = notifyOnConnect;
-    this.#idlePauseMinutes = idlePauseMinutes;
+    this.#notifyOnConnect = options.notifyOnConnect;
+    this.#idlePauseMinutes = options.idlePauseMinutes;
+    this.#sleepOnLocalInput = options.sleepOnLocalInput;
 
     helper.on('frame', (jpeg: Buffer) => this.#sendBinary(BINARY_JPEG, jpeg));
     helper.on('video', (accessUnit: Buffer) => this.#sendBinary(BINARY_H264, accessUnit));
@@ -173,6 +180,18 @@ export class SessionHub {
     this.#helper.send({ type: 'stop' });
   }
 
+  /**
+   * Pauses the session from the server side (no round trip to the browser first),
+   * then tells the browser to show its sleep overlay.
+   */
+  #sleep(client: Client, reason: 'local'): void {
+    client.paused = true;
+    this.#helper.send({ type: 'releaseAll' });
+    this.#helper.send({ type: 'stop' });
+    log.info(`someone is using the Mac directly; session from ${client.ip} is sleeping`);
+    this.#send(client, { t: 'sleep', reason });
+  }
+
   #startStream(client: Client): void {
     this.#helper.send({ type: 'resetCredits', n: INITIAL_CREDITS });
     this.#helper.send({ type: 'start', ...client.stream });
@@ -187,7 +206,9 @@ export class SessionHub {
   #onHelperEvent(event: HelperEvent): void {
     const client = this.#active;
     if (!client || client.paused) return;
-    if (event.type === 'cursor') {
+    if (event.type === 'localInput') {
+      if (this.#sleepOnLocalInput) this.#sleep(client, 'local');
+    } else if (event.type === 'cursor') {
       this.#send(client, { t: 'cursor', x: event.x, y: event.y, visible: event.visible, seq: event.seq });
     } else if (event.type === 'cursorShape') {
       this.#send(client, {

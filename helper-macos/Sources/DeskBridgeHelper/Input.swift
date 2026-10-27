@@ -138,7 +138,7 @@ final class InputInjector {
         }
         guard let event = CGEvent(mouseEventSource: source, mouseType: type, mouseCursorPosition: point, mouseButton: cgButton) else { return }
         event.flags = currentFlags()
-        event.post(tap: .cghidEventTap)
+        post(event)
     }
 
     private func postButton(_ button: Button, down: Bool) {
@@ -169,7 +169,7 @@ final class InputInjector {
             event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         }
         event.flags = currentFlags()
-        event.post(tap: .cghidEventTap)
+        post(event)
     }
 
     private func postScroll(dx: Double, dy: Double) {
@@ -187,7 +187,7 @@ final class InputInjector {
         event.setIntegerValueField(.scrollWheelEventIsContinuous, value: 1)
         event.location = point
         event.flags = currentFlags()
-        event.post(tap: .cghidEventTap)
+        post(event)
     }
 
     // MARK: Keyboard
@@ -228,7 +228,7 @@ final class InputInjector {
                 event.setIntegerValueField(.keyboardEventAutorepeat, value: 1)
             }
         }
-        event.post(tap: .cghidEventTap)
+        post(event)
     }
 
     /// Types arbitrary Unicode text, independent of the remote keyboard layout.
@@ -248,7 +248,7 @@ final class InputInjector {
                     guard let event = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: down) else { continue }
                     event.flags = []
                     event.keyboardSetUnicodeString(stringLength: units.count, unicodeString: units)
-                    event.post(tap: .cghidEventTap)
+                    post(event)
                 }
             }
             usleep(InputInjector.typingDelay)
@@ -280,6 +280,12 @@ final class InputInjector {
     }
 
     // MARK: Helpers
+
+    /// Posts an event marked as synthetic, so local-input detection ignores it.
+    private func post(_ event: CGEvent) {
+        SyntheticEvent.mark(event)
+        event.post(tap: .cghidEventTap)
+    }
 
     private func currentFlags() -> CGEventFlags {
         var flags: CGEventFlags = []

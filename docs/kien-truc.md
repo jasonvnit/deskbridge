@@ -99,6 +99,7 @@ Tọa độ chuột được chuẩn hóa về khoảng 0–1 theo màn hình đ
 | `pong` | `ts` | Trả lời `ping` |
 | `replaced` | | Thiết bị khác đã chiếm phiên (đóng với mã `4001`) |
 | `sessionExpired` | | Phiên hết hạn hoặc đã đăng xuất (đóng với mã `4003`) |
+| `sleep` | `reason` (`local`) | Server đã tự tạm dừng phiên (có người dùng Mac trực tiếp); trình duyệt hiện overlay |
 
 ### Tạm dừng (pause)
 
@@ -122,6 +123,10 @@ Video không chứa con trỏ. `CursorTracker` trong helper đọc vị trí (~3
 
 Web client ghi lại thời điểm thao tác cuối (`pointerdown`, `pointermove`, `keydown`, `wheel`, `touchstart`). Nếu quá `idlePauseMinutes` mà không có thao tác, client tạm dừng như khi rời trang (gửi `pause`) nhưng hiện overlay **Sleeping** với nút **Wake up**.
 
+### Phát hiện người dùng tại máy Mac
+
+Mọi sự kiện helper tạo ra được gắn dấu `eventSourceUserData`. Trong lúc stream, `LocalInputMonitor` mở một event tap chỉ-lắng-nghe ở cấp session (dùng quyền Accessibility sẵn có) và bỏ qua sự kiện mang dấu. Phím, click, cuộn không có dấu được tính ngay; chuyển động chuột phải cộng dồn ≥ 40 point trong 1 giây. Helper gửi sự kiện `localInput` (tối đa mỗi 2 giây). Server lập tức đánh dấu phiên tạm dừng, gửi `releaseAll` + `stop` cho helper, rồi gửi `sleep` cho trình duyệt.
+
 ### Kiểm soát luồng (flow control)
 
 DeskBridge không đẩy khung hình liên tục mà dùng cơ chế "tín dụng" (credit):
@@ -140,7 +145,7 @@ Kết quả: mạng nhanh thì đạt đủ fps; mạng chậm thì fps tự gi�
   - Loại `1`: JSON (`ready`, `streamInfo`, `streamError`, `reply`).
   - Loại `2`: khung hình JPEG.
   - Loại `3`: khung H.264 (1 byte keyframe + AVCC).
-- Sự kiện JSON khác: `cursor`, `cursorShape`, `videoConfig`.
+- Sự kiện JSON khác: `cursor`, `cursorShape`, `videoConfig`, `localInput`.
 - **stderr:** log, được server ghi vào `server.log`.
 
 | Lệnh (`type`) | Trường | Phản hồi |
@@ -177,6 +182,7 @@ helper-macos/.build/release/deskbridge-helper displays             # In danh sá
 | `H264Encoder.swift` | Mã hóa H.264 bằng VideoToolbox, xuất avcC + AVCC |
 | `CursorTracker.swift` | Vị trí và hình dạng con trỏ |
 | `Probe.swift` | Lệnh `probe`: thử chụp thật để kiểm tra quyền |
+| `LocalInputMonitor.swift` | Đánh dấu sự kiện tự tạo, phát hiện thao tác thật trên Mac |
 | `Input.swift` | Giả lập chuột/phím bằng CGEvent, theo dõi phím đang giữ, nhận diện double-click |
 | `KeyMap.swift` | Bảng chuyển `KeyboardEvent.code` → mã phím macOS |
 | `Clipboard.swift` | Đọc/ghi text và ảnh với NSPasteboard |
