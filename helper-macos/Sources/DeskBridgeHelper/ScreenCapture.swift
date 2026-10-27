@@ -46,6 +46,10 @@ final class ScreenCapture: NSObject, SCStreamOutput, SCStreamDelegate {
     private var dirty = false
     private var credits = 0
 
+    /// Called when a stream starts (with its display) and when it stops.
+    var onStart: (CGDirectDisplayID) -> Void = { _ in }
+    var onStop: () -> Void = {}
+
     init(output: Output) {
         self.output = output
     }
@@ -131,7 +135,8 @@ final class ScreenCapture: NSObject, SCStreamOutput, SCStreamDelegate {
         config.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(options.fps))
         config.pixelFormat = kCVPixelFormatType_32BGRA
         config.colorSpaceName = CGColorSpace.sRGB
-        config.showsCursor = true
+        // The cursor is sent separately (CursorTracker) and drawn by the client without delay.
+        config.showsCursor = false
         config.queueDepth = 5
 
         let filter = SCContentFilter(display: display, excludingWindows: [])
@@ -157,11 +162,14 @@ final class ScreenCapture: NSObject, SCStreamOutput, SCStreamDelegate {
                 }
                 return
             }
+            self.onStart(display.displayID)
             self.output.send([
                 "type": "streamInfo",
                 "displayId": Int(display.displayID),
                 "width": width,
                 "height": height,
+                "pointWidth": display.width,
+                "pointHeight": display.height,
                 "fps": self.options.fps,
             ])
         }
@@ -169,6 +177,7 @@ final class ScreenCapture: NSObject, SCStreamOutput, SCStreamDelegate {
 
     private func stopStream() {
         guard let current = stream else { return }
+        onStop()
         stream = nil
         latest = nil
         dirty = false
@@ -194,6 +203,7 @@ final class ScreenCapture: NSObject, SCStreamOutput, SCStreamDelegate {
         queue.async {
             guard stream === self.stream else { return }
             self.stream = nil
+            self.onStop()
             self.reportError("capture stopped: \(error.localizedDescription)")
         }
     }

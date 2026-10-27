@@ -7,6 +7,7 @@ import Foundation
 //   deskbridge-helper permissions          print permission status as JSON
 //   deskbridge-helper request-permissions  show the system prompts, then print status
 //   deskbridge-helper displays             print the display list as JSON
+//   deskbridge-helper probe                try a real capture; exit 0 if it works
 //
 // Without arguments it runs as the server's child process: JSON-lines commands on
 // stdin, length-prefixed JSON/JPEG messages on stdout (see Output.swift), logs on stderr.
@@ -35,15 +36,28 @@ if arguments.count > 1 {
             exit(0)
         }
         dispatchMain()
+    case "probe":
+        let probe = CaptureProbe { ok, message in
+            printJSON(["capture": ok, "message": message])
+            exit(ok ? 0 : 1)
+        }
+        probe.run()
+        dispatchMain()
     default:
-        FileHandle.standardError.write(Data("usage: deskbridge-helper [permissions|request-permissions|displays]\n".utf8))
+        FileHandle.standardError.write(Data("usage: deskbridge-helper [permissions|request-permissions|displays|probe]\n".utf8))
         exit(2)
     }
 }
 
 final class Controller {
     private let output = Output()
-    private lazy var capture = ScreenCapture(output: output)
+    private lazy var capture: ScreenCapture = {
+        let capture = ScreenCapture(output: output)
+        let cursor = CursorTracker(output: output)
+        capture.onStart = { cursor.start(displayID: $0) }
+        capture.onStop = { cursor.stop() }
+        return capture
+    }()
     private let input = InputInjector()
     private let inputQueue = DispatchQueue(label: "deskbridge.input", qos: .userInteractive)
 

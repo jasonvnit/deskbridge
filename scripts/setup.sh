@@ -33,7 +33,7 @@ ok "Swift $(swift --version 2>/dev/null | head -n1 | sed -E 's/.*Swift version (
 
 # ---- Dependencies and build ---------------------------------------------------------------
 info "Installing Node.js dependencies…"
-npm install --omit=dev --no-audit --no-fund --loglevel=error
+npm install --no-audit --no-fund --loglevel=error
 ok "Dependencies installed"
 
 info "Building the macOS helper (first build takes a minute)…"

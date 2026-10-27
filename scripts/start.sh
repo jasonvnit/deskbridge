@@ -17,6 +17,20 @@ if running_pid server >/dev/null; then
   exec "$ROOT_DIR/scripts/status.sh"
 fi
 
+# ---- Helper install ---------------------------------------------------------------
+# macOS remembers screen-recording decisions per (path, code signature). A rebuilt helper
+# at the same path no longer matches and is silently blocked, so each build runs from its
+# own folder named after its code hash.
+cdhash="$(codesign -dvvv "$HELPER_BIN" 2>&1 | sed -n 's/^CDHash=//p')"
+[[ -n "$cdhash" ]] || die "Cannot read the helper's code signature. Run scripts/setup.sh again."
+installed_helper="$STATE_DIR/bin/$cdhash/deskbridge-helper"
+if [[ ! -x "$installed_helper" ]]; then
+  mkdir -p "$(dirname "$installed_helper")"
+  cp "$HELPER_BIN" "$installed_helper"
+fi
+export DESKBRIDGE_HELPER_PATH="$installed_helper"
+HELPER_BIN="$installed_helper"
+
 # ---- Permissions --------------------------------------------------------------
 read -r screen_ok access_ok < <(helper_permissions)
 if [[ "$screen_ok" != "true" || "$access_ok" != "true" ]]; then
@@ -27,6 +41,17 @@ if [[ "$screen_ok" != "true" || "$access_ok" != "true" ]]; then
   open "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture" 2>/dev/null || true
   exit 1
 fi
+
+if ! probe="$("$HELPER_BIN" probe 2>/dev/null)"; then
+  warn "macOS blocked a test screen capture: $(printf '%s' "$probe" | sed -n 's/.*"message" : "\(.*\)".*/\1/p')"
+  warn "Open System Settings → Privacy & Security → Screen & System Audio Recording:"
+  warn "  - remove (−) any \"deskbridge-helper\" entries,"
+  warn "  - make sure the terminal app you run this script from is turned on."
+  warn "Then run scripts/start.sh again."
+  open "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture" 2>/dev/null || true
+  exit 1
+fi
+ok "Screen capture works"
 
 # ---- Tunnel prerequisites -------------------------------------------------------
 tunnel_id=""

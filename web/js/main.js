@@ -1,4 +1,5 @@
 import { ClipboardController } from './clipboard.js';
+import { CursorOverlay } from './cursor.js';
 import { Connection } from './connection.js';
 import { KeyboardController } from './keyboard.js';
 import { PointerController } from './pointer.js';
@@ -15,12 +16,13 @@ const send = (message) => connection.send(message);
 const viewer = new Viewer($('stage'), $('screen'));
 const keyboard = new KeyboardController({ sink: $('kbd-sink'), send, settings });
 const clipboard = new ClipboardController({ keyboard });
+const cursor = new CursorOverlay({ element: $('remote-cursor'), viewer });
 const pointer = new PointerController({
   stage: $('stage'),
   viewer,
   send,
   settings,
-  cursorElement: $('local-cursor'),
+  cursor,
 });
 
 // ---- Stats ------------------------------------------------------------------
@@ -74,6 +76,13 @@ connection.addEventListener('message', (event) => {
     case 'streamInfo':
       stats.width = message.width;
       stats.height = message.height;
+      cursor.setDisplayPointWidth(message.pointWidth);
+      break;
+    case 'cursor':
+      cursor.setRemote(message.x, message.y, message.visible);
+      break;
+    case 'cursorShape':
+      cursor.setShape(message);
       break;
     case 'streamError':
       setStatus(`Screen capture failed: ${message.message}`, { error: true });
@@ -359,4 +368,4 @@ setToolbarHidden(settings.get('toolbarHidden'));
 connection.connect();
 
 // Expose for debugging in the browser console.
-window.deskbridge = { settings, connection, viewer, keyboard, clipboard, pointer };
+window.deskbridge = { settings, connection, viewer, keyboard, clipboard, pointer, cursor };

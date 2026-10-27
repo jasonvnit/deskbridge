@@ -155,6 +155,8 @@ input[type="text"] {
   overflow: hidden;
   background: #000;
   touch-action: none;
+  /* The Mac's cursor is drawn by CursorOverlay instead. */
+  cursor: none;
 }
 
 #screen {
@@ -166,16 +168,15 @@ input[type="text"] {
   background: #000;
 }
 
-#local-cursor {
+.remote-cursor {
   position: absolute;
-  width: 14px;
-  height: 14px;
-  margin: -7px 0 0 -7px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  background: rgba(47, 129, 247, 0.65);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  left: 0;
+  top: 0;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: transform;
+  z-index: 1;
 }
 
 .status-overlay {

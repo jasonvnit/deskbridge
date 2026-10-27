@@ -25,7 +25,7 @@ export class PointerController {
   #viewer;
   #send;
   #settings;
-  #cursorElement;
+  #cursorOverlay;
   #touches = new Map();
   #ignored = new Set();
   #gesture = null;
@@ -37,12 +37,12 @@ export class PointerController {
   /** Called on every new pointer; return false to swallow the gesture (e.g. to close a panel). */
   onPointerStart = () => true;
 
-  constructor({ stage, viewer, send, settings, cursorElement }) {
+  constructor({ stage, viewer, send, settings, cursor }) {
     this.#stage = stage;
     this.#viewer = viewer;
     this.#send = send;
     this.#settings = settings;
-    this.#cursorElement = cursorElement;
+    this.#cursorOverlay = cursor;
 
     stage.addEventListener('pointerdown', (e) => this.#onDown(e));
     stage.addEventListener('pointermove', (e) => this.#onMove(e));
@@ -55,10 +55,7 @@ export class PointerController {
       document.addEventListener(type, (e) => e.preventDefault());
     }
 
-    viewer.onLayout = () => this.#renderCursor();
-    settings.addEventListener('change', (e) => {
-      if (e.detail.key === 'mode') this.#renderCursor();
-    });
+    viewer.onLayout = () => cursor.render();
   }
 
   get #mode() {
@@ -69,6 +66,7 @@ export class PointerController {
 
   #queueMove(point) {
     this.#pendingMove = point;
+    this.#cursorOverlay.setLocal(point);
     this.#requestFlush();
   }
 
@@ -341,6 +339,11 @@ export class PointerController {
   #moveCursorBy(dx, dy) {
     const size = this.#viewer.displayedSize();
     if (!size.width || !size.height) return;
+    // Start from where the Mac's cursor really is unless we are already moving it.
+    if (!this.#cursorOverlay.isLocallyDriven) {
+      const { x, y } = this.#cursorOverlay.remotePosition;
+      this.#cursor = { x, y };
+    }
     const speed = this.#settings.get('trackpadSpeed');
     // Simple acceleration: fast swipes travel further.
     const acceleration = 1 + Math.min(Math.hypot(dx, dy), 40) / 25;
@@ -351,15 +354,5 @@ export class PointerController {
     this.#queueMove(this.#cursor);
     const client = this.#viewer.toClient(this.#cursor.x, this.#cursor.y);
     this.#viewer.keepVisible(client.x, client.y);
-    this.#renderCursor();
-  }
-
-  #renderCursor() {
-    const visible = this.#mode === 'trackpad' && this.#viewer.hasFrame;
-    this.#cursorElement.hidden = !visible;
-    if (!visible) return;
-    const point = this.#viewer.toClient(this.#cursor.x, this.#cursor.y);
-    this.#cursorElement.style.left = `${point.x}px`;
-    this.#cursorElement.style.top = `${point.y}px`;
   }
 }

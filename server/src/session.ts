@@ -170,14 +170,27 @@ export class SessionHub {
 
   #onHelperEvent(event: HelperEvent): void {
     const client = this.#active;
-    if (!client) return;
-    if (event.type === 'streamInfo') {
+    if (!client || client.paused) return;
+    if (event.type === 'cursor') {
+      this.#send(client, { t: 'cursor', x: event.x, y: event.y, visible: event.visible });
+    } else if (event.type === 'cursorShape') {
+      this.#send(client, {
+        t: 'cursorShape',
+        png: event.png,
+        hotX: event.hotX,
+        hotY: event.hotY,
+        width: event.width,
+        height: event.height,
+      });
+    } else if (event.type === 'streamInfo') {
       this.#displayId = Number(event.displayId) || 0;
       this.#send(client, {
         t: 'streamInfo',
         displayId: this.#displayId,
         width: event.width,
         height: event.height,
+        pointWidth: event.pointWidth,
+        pointHeight: event.pointHeight,
         fps: event.fps,
       });
     } else if (event.type === 'streamError') {
