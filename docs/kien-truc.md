@@ -78,7 +78,7 @@ Trình duyệt ↔ server dùng một kết nối WebSocket:
 | `pause` | | Tạm dừng: server nhả mọi phím/nút, dừng chụp màn hình, bỏ qua mọi lệnh trừ `stream` và `ping` |
 | `ack` | | Đã vẽ xong 1 khung hình (xem *Kiểm soát luồng*) |
 | `refresh` | | Gửi lại khung hình hiện tại |
-| `mouse` | `action`: `move`/`down`/`up`/`scroll`; `x`, `y` (0–1); `button`: `left`/`right`/`middle`; `dx`, `dy` (px) | Chuột |
+| `mouse` | `action`: `move`/`down`/`up`/`scroll`; `x`, `y` (0–1); `button`: `left`/`right`/`middle`; `dx`, `dy` (px); `seq` (số thứ tự tăng dần, có ở lệnh mang tọa độ) | Chuột |
 | `key` | `code` (giá trị `KeyboardEvent.code`), `down`, `repeat` | Phím theo vị trí vật lý |
 | `text` | `text` | Gõ văn bản Unicode |
 | `releaseAll` | | Nhả mọi phím và nút chuột |
@@ -93,7 +93,7 @@ Tọa độ chuột được chuẩn hóa về khoảng 0–1 theo màn hình đ
 | `welcome` | `defaults` | (xem trên) |
 | `streamInfo` | `displayId`, `codec`, `width`, `height`, `pointWidth`, `pointHeight`, `fps` | Stream đã bắt đầu (`pointWidth/Height`: kích thước màn hình theo point, dùng để scale con trỏ) |
 | `videoConfig` | `codec` (ví dụ `avc1.640C28`), `description` (avcC, base64), `width`, `height` | Cấu hình decoder; gửi trước keyframe đầu tiên và khi tham số thay đổi |
-| `cursor` | `x`, `y` (0–1), `visible` | Vị trí con trỏ trên Mac (~30 lần/giây khi thay đổi) |
+| `cursor` | `x`, `y` (0–1), `visible`, `seq` | Vị trí con trỏ trên Mac (~30 lần/giây khi thay đổi); `seq` là số thứ tự của lệnh chuột cuối cùng Mac đã thực hiện trước khi đọc vị trí |
 | `cursorShape` | `id`, và lần đầu kèm `png` (base64), `hotX`, `hotY`, `width`, `height` (point) | Hình dạng con trỏ; các lần sau chỉ gửi `id` để trình duyệt dùng lại bản đã lưu |
 | `streamError` | `message` | Lỗi chụp màn hình (thường do thiếu quyền) |
 | `pong` | `ts` | Trả lời `ping` |
@@ -114,7 +114,7 @@ Web client gửi `pause` khi trang bị ẩn (`visibilitychange`, `pagehide`) ho
 
 ### Con trỏ chuột
 
-Video không chứa con trỏ. `CursorTracker` trong helper đọc vị trí (~30 Hz) và hình dạng con trỏ hệ thống (`NSCursor.currentSystem`), gửi riêng. Trình duyệt vẽ con trỏ bằng một phần tử `<img>` phủ lên canvas: khi người dùng đang di chuyển (400 ms gần nhất) thì vẽ tại vị trí cục bộ ngay lập tức, ngoài ra theo vị trí Mac gửi về.
+Video không chứa con trỏ. `CursorTracker` trong helper đọc vị trí (~30 Hz) và hình dạng con trỏ hệ thống (`NSCursor.currentSystem`), gửi riêng. Trình duyệt vẽ con trỏ bằng một phần tử `<img>` phủ lên canvas, tại vị trí cục bộ ngay khi người dùng di chuyển. Mỗi lệnh chuột mang một số thứ tự `seq`, và Mac gửi kèm `seq` của lệnh cuối cùng đã thực hiện trong mỗi báo cáo vị trí. Trình duyệt giữ vị trí cục bộ cho tới khi nhận được báo cáo có `seq` mới bằng lệnh gần nhất; các báo cáo cũ hơn (vẫn đang trên đường qua tunnel) bị bỏ qua, nên con trỏ không bị giật ngược về vị trí cũ. Nếu sau 3 giây vẫn chưa có xác nhận, trình duyệt quay về dùng vị trí Mac gửi.
 
 ### Kiểm soát luồng (flow control)
 

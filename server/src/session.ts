@@ -186,7 +186,7 @@ export class SessionHub {
     const client = this.#active;
     if (!client || client.paused) return;
     if (event.type === 'cursor') {
-      this.#send(client, { t: 'cursor', x: event.x, y: event.y, visible: event.visible });
+      this.#send(client, { t: 'cursor', x: event.x, y: event.y, visible: event.visible, seq: event.seq });
     } else if (event.type === 'cursorShape') {
       this.#send(client, {
         t: 'cursorShape',
@@ -279,6 +279,7 @@ export class SessionHub {
         if (action !== 'move' && action !== 'down' && action !== 'up' && action !== 'scroll') return;
         const button = message.button;
         const command: Record<string, unknown> = { type: 'mouse', action, displayId: this.#displayId };
+        if (typeof message.seq === 'number' && Number.isSafeInteger(message.seq)) command.seq = message.seq;
         if (typeof message.x === 'number' && typeof message.y === 'number') {
           command.x = num(message.x, 0, 0, 1);
           command.y = num(message.y, 0, 0, 1);

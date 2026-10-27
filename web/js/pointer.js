@@ -33,6 +33,7 @@ export class PointerController {
   #pendingMove = null;
   #scroll = { dx: 0, dy: 0, x: null, y: null };
   #frameRequested = false;
+  #seq = 0;
 
   /** Called on every new pointer; return false to swallow the gesture (e.g. to close a panel). */
   onPointerStart = () => true;
@@ -66,7 +67,7 @@ export class PointerController {
 
   #queueMove(point) {
     this.#pendingMove = point;
-    this.#cursorOverlay.setLocal(point);
+    this.#cursorOverlay.showLocal(point);
     this.#requestFlush();
   }
 
@@ -74,12 +75,19 @@ export class PointerController {
     if (!this.#pendingMove) return;
     const { x, y } = this.#pendingMove;
     this.#pendingMove = null;
-    this.#send({ t: 'mouse', action: 'move', x, y });
+    this.#sendPositioned({ t: 'mouse', action: 'move', x, y });
   }
 
   #button(action, button, point) {
     this.#flushMove();
-    this.#send({ t: 'mouse', action, button, x: point.x, y: point.y });
+    this.#sendPositioned({ t: 'mouse', action, button, x: point.x, y: point.y });
+  }
+
+  /** Sends a mouse message that moves the pointer, numbered so the Mac can echo it back. */
+  #sendPositioned(message) {
+    this.#seq += 1;
+    this.#cursorOverlay.setLocal({ x: message.x, y: message.y }, this.#seq);
+    this.#send({ ...message, seq: this.#seq });
   }
 
   #click(point, button = 'left') {

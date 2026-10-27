@@ -65,6 +65,16 @@ final class InputInjector {
     private var pressedKeys = Set<CGKeyCode>()
     private var pressedButtons = Set<Int>()
     private var point = CGPoint.zero
+    private let seqLock = NSLock()
+    private var lastAppliedSeq = 0
+
+    /// Sequence number of the last mouse command applied. Sent back with cursor
+    /// positions so the client can ignore positions older than its own input.
+    var appliedSeq: Int {
+        seqLock.lock()
+        defer { seqLock.unlock() }
+        return lastAppliedSeq
+    }
     private var lastClick: LastClick?
     private var clickCount = 1
 
@@ -72,7 +82,14 @@ final class InputInjector {
 
     func mouse(_ message: [String: Any]) {
         lock.lock()
-        defer { lock.unlock() }
+        defer {
+            lock.unlock()
+            if let seq = message["seq"] as? Int {
+                seqLock.lock()
+                lastAppliedSeq = max(lastAppliedSeq, seq)
+                seqLock.unlock()
+            }
+        }
 
         let displayID = (message["displayId"] as? NSNumber).map { CGDirectDisplayID($0.uint32Value) } ?? CGMainDisplayID()
         if let x = message["x"] as? Double, let y = message["y"] as? Double {

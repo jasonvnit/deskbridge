@@ -11,8 +11,10 @@ const DEFAULT_SHAPE = {
   height: 25,
 };
 
-// Local input wins over the position reported by the Mac for this long.
-const LOCAL_PRIORITY_MS = 400;
+// Right after local input, always show the local position (covers moves not sent yet).
+const LOCAL_MIN_MS = 150;
+// Fallback if the Mac never confirms our latest move (e.g. an older helper without seq).
+const LOCAL_MAX_MS = 3000;
 // Keep the cursor readable when a large screen is shown on a small device.
 const MIN_SCALE = 0.6;
 
@@ -22,14 +24,21 @@ const MIN_SCALE = 0.6;
  * The cursor is not part of the video: its shape and position come as small
  * messages, and while the user moves the pointer it is drawn at the local
  * position immediately, so it never waits for a video frame.
+ *
+ * Every pointer message carries a sequence number, and the Mac echoes the last
+ * one it applied with each position report. Reports older than our latest move
+ * are still in flight from before, so they are ignored; this prevents the cursor
+ * from jumping back to where it was and then crawling to the new point.
  */
 export class CursorOverlay {
   #element;
   #viewer;
   #shape = DEFAULT_SHAPE;
-  #remote = { x: 0.5, y: 0.5, visible: false };
+  #remote = { x: 0.5, y: 0.5, visible: false, seq: 0 };
   #local = null;
+  #localSeq = 0;
   #localTime = 0;
+  #fallbackTimer = 0;
   #pointWidth = 0;
   #frameRequested = false;
   #shapes = new Map();
@@ -45,9 +54,13 @@ export class CursorOverlay {
     return this.#remote;
   }
 
-  /** True while local input is driving the cursor. */
+  /** True while local input is ahead of what the Mac has confirmed. */
   get isLocallyDriven() {
-    return this.#local !== null && performance.now() - this.#localTime < LOCAL_PRIORITY_MS;
+    if (!this.#local) return false;
+    const age = performance.now() - this.#localTime;
+    if (age < LOCAL_MIN_MS) return true;
+    if (age > LOCAL_MAX_MS) return false;
+    return this.#remote.seq < this.#localSeq;
   }
 
   setDisplayPointWidth(width) {
@@ -67,16 +80,24 @@ export class CursorOverlay {
     this.render();
   }
 
-  setRemote(x, y, visible) {
-    this.#remote = { x, y, visible };
+  setRemote(x, y, visible, seq = 0) {
+    this.#remote = { x, y, visible, seq };
     if (!this.isLocallyDriven) this.render();
   }
 
-  /** Called for every pointer move sent to the Mac. */
-  setLocal(point) {
+  /** Shows a pointer position immediately (before it is sent). */
+  showLocal(point) {
     this.#local = { x: point.x, y: point.y };
     this.#localTime = performance.now();
     this.render();
+  }
+
+  /** Records a pointer position that was sent to the Mac with sequence number `seq`. */
+  setLocal(point, seq) {
+    this.#localSeq = seq;
+    this.showLocal(point);
+    clearTimeout(this.#fallbackTimer);
+    this.#fallbackTimer = setTimeout(() => this.render(), LOCAL_MAX_MS + 50);
   }
 
   render() {

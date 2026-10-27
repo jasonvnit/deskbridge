@@ -101,7 +101,7 @@ connection.addEventListener('message', (event) => {
       }
       break;
     case 'cursor':
-      cursor.setRemote(message.x, message.y, message.visible);
+      cursor.setRemote(message.x, message.y, message.visible, message.seq ?? 0);
       break;
     case 'cursorShape':
       cursor.setShape(message);

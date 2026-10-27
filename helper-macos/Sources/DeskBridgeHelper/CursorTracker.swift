@@ -4,7 +4,8 @@ import AppKit
 /// so the client can draw the cursor instantly instead of waiting for a frame.
 ///
 /// Events:
-///   {"type":"cursor","x":0..1,"y":0..1,"visible":bool}
+///   {"type":"cursor","x":0..1,"y":0..1,"visible":bool,"seq":n}
+///     seq = last mouse command applied before this position was read
 ///   {"type":"cursorShape","id":"…","png":base64,"hotX":pt,"hotY":pt,"width":pt,"height":pt}
 ///   {"type":"cursorShape","id":"…"}   (shape already sent during this stream; the client caches it)
 final class CursorTracker {
@@ -13,12 +14,14 @@ final class CursorTracker {
     private let output: Output
     private var timer: DispatchSourceTimer?
     private var displayID: CGDirectDisplayID = CGMainDisplayID()
-    private var lastPosition: (x: Double, y: Double, visible: Bool)?
+    private var lastPosition: (x: Double, y: Double, visible: Bool, seq: Int)?
+    private let appliedSeq: () -> Int
     private var lastShapeKey: UInt64?
     private var sentShapes = Set<UInt64>()
 
-    init(output: Output) {
+    init(output: Output, appliedSeq: @escaping () -> Int) {
         self.output = output
+        self.appliedSeq = appliedSeq
     }
 
     func start(displayID: CGDirectDisplayID) {
@@ -44,6 +47,8 @@ final class CursorTracker {
     }
 
     private func tick() {
+        // Read the sequence first: the position read afterwards includes at least those moves.
+        let seq = appliedSeq()
         guard let location = CGEvent(source: nil)?.location else { return }
         let bounds = CGDisplayBounds(displayID)
         let visible = bounds.width > 0 && bounds.contains(location)
@@ -51,11 +56,12 @@ final class CursorTracker {
         let y = bounds.height > 0 ? Double((location.y - bounds.minY) / bounds.height) : 0
 
         if lastPosition == nil
+            || lastPosition!.seq != seq
             || lastPosition!.visible != visible
             || abs(lastPosition!.x - x) > 0.00005
             || abs(lastPosition!.y - y) > 0.00005 {
-            lastPosition = (x, y, visible)
-            output.send(["type": "cursor", "x": x, "y": y, "visible": visible])
+            lastPosition = (x, y, visible, seq)
+            output.send(["type": "cursor", "x": x, "y": y, "visible": visible, "seq": seq])
         }
 
         sendShapeIfChanged()
